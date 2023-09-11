@@ -152,7 +152,7 @@ public class Frame extends LFrame.MainWindow implements LocaleListener {
     bottomTab = new JTabbedPane();
     bottomTab.setFont(AppPreferences.getScaledFont(new Font("Dialog", Font.BOLD, 9)));
     bottomTab.add(attrTable = new AttrTable(this));
-    bottomTab.add(new RegTabContent(this));
+    //bottomTab.add(new RegTabContent(this));
 
     zoom = new ZoomControl(layoutZoomModel, layoutCanvas);
 
@@ -514,7 +514,7 @@ public class Frame extends LFrame.MainWindow implements LocaleListener {
     topTab.setTitleAt(0, S.get("designTab"));
     topTab.setTitleAt(1, S.get("simulateTab"));
     bottomTab.setTitleAt(0, S.get("propertiesTab"));
-    bottomTab.setTitleAt(1, S.get("stateTab"));
+//    bottomTab.setTitleAt(1, S.get("stateTab"));
   }
 
   private void placeToolbar() {
