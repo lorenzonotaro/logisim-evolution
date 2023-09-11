@@ -41,7 +41,7 @@ public class Propagator {
 
     @Override
     public int hashCode() {
-      return 31 * cause.hashCode() + loc.hashCode();
+      return 31 * loc.hashCode();
     }
   }
 
