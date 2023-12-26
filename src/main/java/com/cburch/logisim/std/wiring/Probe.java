@@ -31,6 +31,8 @@ import com.cburch.logisim.prefs.AppPreferences;
 import com.cburch.logisim.prefs.PrefMonitorBooleanConvert;
 import com.cburch.logisim.tools.key.DirectionConfigurator;
 import com.cburch.logisim.util.GraphicsUtil;
+
+import javax.swing.*;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -294,6 +296,7 @@ public class Probe extends InstanceFactory {
   public AttributeSet createAttributeSet() {
     AttributeSet attrs = new ProbeAttributes();
     attrs.setValue(ProbeAttributes.PROBEAPPEARANCE, ProbeAttributes.getDefaultProbeAppearance());
+    attrs.setValue(ProbeAttributes.PAUSEONVALUE, false);
     return attrs;
   }
 
@@ -393,11 +396,18 @@ public class Probe extends InstanceFactory {
       }
       int oldWidth = oldValue == null ? 1 : oldValue.getBitWidth().getWidth();
       int newWidth = newValue.getBitWidth().getWidth();
+      ProbeAttributes attrs = (ProbeAttributes) state.getAttributeSet();
       if (oldWidth != newWidth) {
-        ProbeAttributes attrs = (ProbeAttributes) state.getAttributeSet();
         attrs.width = newValue.getBitWidth();
         state.getInstance().recomputeBounds();
         state.getInstance().computeLabelTextField(Instance.AVOID_LEFT);
+      }
+      if((attrs.pauseOnValue && attrs.pauseValue != null && newValue.toLongValue() == attrs.pauseValue) || attrs.pauseOnError && newValue.isErrorValue()) {
+        state.getProject().getSimulator().setAutoTicking(false);
+        Bounds bounds = state.getInstance().getBounds();
+        SwingUtilities.invokeLater(() -> {
+          JOptionPane.showMessageDialog(state.getProject().getFrame(), S.get("probeBreakpointHitMessage", attrs.label, bounds.getCenterX(), bounds.getCenterY()), S.get("probeBreakpointHitTitle"), JOptionPane.INFORMATION_MESSAGE);
+        });
       }
     }
   }

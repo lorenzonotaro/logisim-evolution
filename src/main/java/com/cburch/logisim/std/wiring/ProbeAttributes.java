@@ -38,6 +38,12 @@ public class ProbeAttributes extends AbstractAttributeSet implements ConvertEven
           S.getter("stdAppearanceAttr"),
           new AttributeOption[] {StdAttr.APPEAR_CLASSIC, APPEAR_EVOLUTION_NEW});
 
+  public static final Attribute<Boolean> PAUSEONVALUE = Attributes.forBoolean("breakOnValue", S.getter("probeBreakOnValue"));
+
+  public static final Attribute<Boolean> PAUSEONERROR = Attributes.forBoolean("breakOnError", S.getter("probeBreakOnError"));
+
+  public static final Attribute<Long> PAUSE_VALUE = Attributes.forHexLong("breakValue", S.getter("probeBreakValue"));
+
   private static final List<Attribute<?>> ATTRIBUTES =
       Arrays.asList(
           StdAttr.FACING,
@@ -45,7 +51,10 @@ public class ProbeAttributes extends AbstractAttributeSet implements ConvertEven
           StdAttr.LABEL,
           StdAttr.LABEL_LOC,
           StdAttr.LABEL_FONT,
-          PROBEAPPEARANCE);
+          PROBEAPPEARANCE,
+              PAUSEONVALUE,
+              PAUSE_VALUE,
+              PAUSEONERROR);
 
   public static AttributeOption getDefaultProbeAppearance() {
     if (AppPreferences.NEW_INPUT_OUTPUT_SHAPES.getBoolean()) return APPEAR_EVOLUTION_NEW;
@@ -59,6 +68,12 @@ public class ProbeAttributes extends AbstractAttributeSet implements ConvertEven
   RadixOption radix = RadixOption.RADIX_2;
   BitWidth width = BitWidth.ONE;
   AttributeOption appearance = StdAttr.APPEAR_CLASSIC;
+
+  Boolean pauseOnValue = false;
+
+  Boolean pauseOnError = false;
+
+  Long pauseValue = 0L;
 
   public ProbeAttributes() {}
 
@@ -81,6 +96,9 @@ public class ProbeAttributes extends AbstractAttributeSet implements ConvertEven
     if (attr == StdAttr.LABEL_FONT) return (E) labelfont;
     if (attr == RadixOption.ATTRIBUTE) return (E) radix;
     if (attr == PROBEAPPEARANCE) return (E) appearance;
+    if (attr == PAUSEONVALUE) return (E) pauseOnValue;
+    if (attr == PAUSE_VALUE) return (E) pauseValue;
+    if (attr == PAUSEONERROR) return (E) pauseOnError;
     return null;
   }
 
@@ -112,6 +130,12 @@ public class ProbeAttributes extends AbstractAttributeSet implements ConvertEven
       AttributeOption NewAppearance = (AttributeOption) value;
       if (appearance.equals(NewAppearance)) return;
       appearance = NewAppearance;
+    } else if (attr == PAUSEONVALUE){
+      pauseOnValue = (Boolean) value;
+    } else if (attr == PAUSE_VALUE) {
+      pauseValue = (Long) value;
+    }else if (attr == PAUSEONERROR){
+      pauseOnError = (Boolean) value;
     } else {
       throw new IllegalArgumentException("unknown attribute");
     }
