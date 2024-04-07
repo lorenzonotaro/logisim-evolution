@@ -1,11 +1,14 @@
 package com.cburch.logisim.gui.lncpu;
 
+import com.cburch.logisim.circuit.Circuit;
+import com.cburch.logisim.circuit.CircuitState;
 import com.cburch.logisim.circuit.Simulator;
+import com.cburch.logisim.circuit.SubcircuitFactory;
+import com.cburch.logisim.comp.Component;
 import com.cburch.logisim.gui.generic.LFrame;
-import com.cburch.logisim.instance.Instance;
+import com.cburch.logisim.instance.StdAttr;
 import com.cburch.logisim.prefs.AppPreferences;
 import com.cburch.logisim.proj.Project;
-import com.cburch.logisim.std.memory.Mem;
 import com.cburch.logisim.util.JFileChoosers;
 import com.cburch.logisim.util.TextLineNumber;
 
@@ -16,16 +19,30 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
 
-public class DebugLncpuWindow implements Simulator.StatusListener {
+public class DebugLncpuWindow implements Simulator.Listener {
     private final Project project;
     private final LFrame window;
     private final JTextArea codeArea;
+    private final Inspector inspector;
     private File tempDir;
+
+    private final Map<String, ComponentEntry> componentDirectory;
 
     private File lastProgramOpened;
 
+    static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
+
+    static final String RAM_DIRECTORY = "RAM/RAM";
+
+    static final String IR_DIRECTORY = "ControlUnit/IR";
+
     public DebugLncpuWindow(Project project) {
+
+        componentDirectory = buildComponentDirectory(new HashMap<>(), project.getCurrentCircuit(), project.getCircuitState(),"");
+
         this.project = project;
         this.window = new LFrame.SubWindow(null);
 
@@ -51,12 +68,31 @@ public class DebugLncpuWindow implements Simulator.StatusListener {
         //Main panel
 
         codeArea = new JTextArea();
-        codeArea.setFont(new Font("monospaced", Font.PLAIN, AppPreferences.getScaled(10)));
+        codeArea.setFont(new Font("monospaced", Font.PLAIN, AppPreferences.getScaled(8)));
+        codeArea.setEditable(false);
         final var scroller = new JScrollPane(codeArea);
         scroller.setRowHeaderView(new TextLineNumber(codeArea));
         main.add(scroller, BorderLayout.CENTER);
 
+        inspector = new Inspector(project, componentDirectory);
+        main.add(inspector, BorderLayout.EAST);
+
         project.getSimulator().addSimulatorListener(this);
+
+        project.getSimulator().addSimulatorListener(this);
+    }
+
+    private Map<String, ComponentEntry> buildComponentDirectory(Map<String, ComponentEntry> directory, Circuit circuit, CircuitState circuitState, String baseDir) {
+        for(Component comp : circuit.getNonWires()){
+            String label = comp.getAttributeSet().getValue(StdAttr.LABEL);
+            String thisComp = (label == null || label.length() == 0) ? comp.getFactory().getDisplayName() : label;
+            String thisName = baseDir + thisComp;
+            directory.put(thisName, new ComponentEntry(comp, circuitState));
+            if (comp.getFactory() instanceof SubcircuitFactory subcircuitFactory){
+                buildComponentDirectory(directory, subcircuitFactory.getSubcircuit(),subcircuitFactory.getSubstate(circuitState, comp), thisName + "/");
+            }
+        }
+        return directory;
     }
 
     private void loadProgramPressed(ActionEvent actionEvent) {
@@ -156,4 +192,14 @@ public class DebugLncpuWindow implements Simulator.StatusListener {
     public void simulatorStateChanged(Simulator.Event e) {
 
     }
+
+
+    @Override
+    public void propagationCompleted(Simulator.Event e) {
+        if(e.didTick()){
+            inspector.update();
+            window.repaint();
+        }
+    }
+
 }

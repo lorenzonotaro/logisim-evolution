@@ -14,7 +14,7 @@ import com.cburch.logisim.data.Value;
 import com.cburch.logisim.instance.InstanceData;
 import com.cburch.logisim.prefs.AppPreferences;
 
-class RegisterData extends ClockState implements InstanceData {
+public class RegisterData extends ClockState implements InstanceData {
   Value value;
 
   public RegisterData(BitWidth width) {

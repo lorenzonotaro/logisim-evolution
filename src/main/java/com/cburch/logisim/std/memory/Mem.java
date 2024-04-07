@@ -151,7 +151,7 @@ public abstract class Mem extends InstanceFactory {
     return currentInstanceFiles.get(instance);
   }
 
-  abstract HexFrame getHexFrame(Project proj, Instance instance, CircuitState state);
+  public abstract HexFrame getHexFrame(Project proj, Instance instance, CircuitState state);
 
   @Override
   protected Object getInstanceFeature(Instance instance, Object key) {

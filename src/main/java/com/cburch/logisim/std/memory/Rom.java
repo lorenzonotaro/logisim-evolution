@@ -148,7 +148,7 @@ public class Rom extends Mem {
   }
 
   @Override
-  HexFrame getHexFrame(Project proj, Instance instance, CircuitState state) {
+  public HexFrame getHexFrame(Project proj, Instance instance, CircuitState state) {
     return RomAttributes.getHexFrame(getMemContents(instance), proj, instance);
   }
 

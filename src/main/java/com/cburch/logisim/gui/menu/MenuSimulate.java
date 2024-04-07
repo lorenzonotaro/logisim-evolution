@@ -400,10 +400,11 @@ public class MenuSimulate extends Menu {
           assWin.toFront();
         }
       } else if (src == debugLncpu){
-        if (debugLncpuWin == null || !debugLncpuWin.isVisible()) {
+        if (debugLncpuWin == null) {
           debugLncpuWin = new DebugLncpuWindow(proj);
           debugLncpuWin.setVisible(true);
         } else {
+          debugLncpuWin.setVisible(true);
           debugLncpuWin.toFront();
         }
       }
