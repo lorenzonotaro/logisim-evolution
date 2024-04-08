@@ -37,6 +37,7 @@ public class DebuggerTextArea extends JTextArea {
     }
 
     private void highlightLine() {
+        getHighlighter().removeAllHighlights();
         if (highlightedLineNumber < 0) {
             return;
         }

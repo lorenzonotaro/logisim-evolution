@@ -4,9 +4,9 @@ import com.cburch.logisim.circuit.CircuitState;
 import com.cburch.logisim.comp.Component;
 
 public class ComponentEntry {
-    Component component;
+    public Component component;
 
-    CircuitState state;
+    public CircuitState state;
 
     ComponentEntry(Component component, CircuitState state) {
         this.component = component;

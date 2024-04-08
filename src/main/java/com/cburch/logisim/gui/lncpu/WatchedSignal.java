@@ -27,12 +27,13 @@ public enum WatchedSignal {
         return ((RegisterData) circuitState.getData(component)).getValue();
     }
 
-    final String directory;
-    final String displayName;
-    final int bits;
+    public final String directory;
+    public final String displayName;
 
-    final boolean displayBinary;
-    final BiFunction<Component, CircuitState, Value> valueGetter;
+    public final int bits;
+
+    public final boolean displayBinary;
+    public final BiFunction<Component, CircuitState, Value> valueGetter;
 
     WatchedSignal(String directory, String displayName, int bits, boolean displayBinary, BiFunction<Component, CircuitState, Value> valueGetter) {
         this.directory = directory;

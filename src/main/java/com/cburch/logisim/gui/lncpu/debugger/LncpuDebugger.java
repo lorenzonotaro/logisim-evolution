@@ -2,35 +2,48 @@ package com.cburch.logisim.gui.lncpu.debugger;
 
 import com.cburch.logisim.circuit.Simulator;
 import com.cburch.logisim.gui.lncpu.ComponentEntry;
+import com.cburch.logisim.gui.lncpu.WatchedSignal;
 import com.cburch.logisim.proj.Project;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class LncpuDebugger {
 
     private final Project project;
-    private final Map<String, ComponentEntry> componentDirectory;
+    private final ComponentEntry irEntry, cspcEntry;
     private Status status;
 
     private final List<DebuggerListener> debuggerListeners = new ArrayList<>();
 
     private Line[] lines;
 
+    // Maps addresses to lines
+    private Map<Long, Line> codeMap;
+
     private String immediateCode;
+
+    private Line currentLine;
 
     public LncpuDebugger(Project project, Map<String, ComponentEntry> componentDirectory) {
         this.project = project;
-        this.componentDirectory = componentDirectory;
         setStatus(Status.UNCONFIGURED);
+
+        this.codeMap = new HashMap<>();
+
+        this.irEntry = componentDirectory.get(WatchedSignal.IR.getDirectory());
+        this.cspcEntry = componentDirectory.get(WatchedSignal.CS_PC.getDirectory());
     }
 
     public void init(String immediateCode){
         this.immediateCode = immediateCode;
         lines = parseLines(immediateCode);
 
-        project.getSimulator().setAutoPropagation(false);
+        project.getSimulator().setAutoPropagation(true);
+        project.getSimulator().setAutoTicking(false);
+        project.getSimulator().setTickFrequency(2048);
         project.getSimulator().reset();
 
         setStatus(Status.PAUSED);
@@ -46,15 +59,15 @@ public class LncpuDebugger {
     }
 
 
-    public void addStatusChangeListener(DebuggerListener listener){
+    public void addDebuggerListener(DebuggerListener listener){
         debuggerListeners.add(listener);
     }
 
-    public void removeStatusChangeListener(DebuggerListener listener){
+    public void removeDebuggerListener(DebuggerListener listener){
         debuggerListeners.remove(listener);
     }
 
-    private static Line[] parseLines(String immediateCode) {
+    private Line[] parseLines(String immediateCode) {
         final var lines = immediateCode.split("\n");
         final var parsedLines = new Line[lines.length];
         for (int i = 0; i < lines.length; i++) {
@@ -65,16 +78,11 @@ public class LncpuDebugger {
             }
 
             parsedLines[i] = new Line(i + 1, lines[i]);
+
+            codeMap.put(parsedLines[i].getAddress().longValue(), parsedLines[i]);
+
         }
         return parsedLines;
-    }
-
-    public boolean setBreakpoint(int lineNumber, boolean value){
-        if (lines[lineNumber - 1] == null) {
-            return false;
-        }
-        lines[lineNumber - 1].setBreakpoint(value);
-        return true;
     }
 
     public Line getLine(int lineNumber){
@@ -86,5 +94,61 @@ public class LncpuDebugger {
     }
 
     public void tick(Simulator.Event e) {
+        var lastLine = currentLine;
+        if (checkSyncronized()){
+            if(status == Status.STEPPING && lastLine != currentLine){
+                setStatus(Status.PAUSED);
+                fireLineHit(currentLine);
+            }else if(status == Status.RUNNING && currentLine.hasBreakpoint()){
+                setStatus(Status.PAUSED);
+                fireLineHit(currentLine);
+            }else if(status == Status.PAUSED){
+                project.getSimulator().setAutoTicking(false);
+                fireLineHit(currentLine);
+            }
+        }
+    }
+
+    private void fireLineHit(Line currentLine) {
+        debuggerListeners.forEach(listener -> listener.lineHit(currentLine));
+    }
+
+    // We are syncronized if the CSPC contains an address that's +1 from a valid instruction, and IR contains the instruction code (fetch complete)
+    private boolean checkSyncronized() {
+        final var cspc = WatchedSignal.CS_PC.valueGetter.apply(cspcEntry.component, cspcEntry.state).toLongValue();
+        final var ir = WatchedSignal.IR.valueGetter.apply(irEntry.component, irEntry.state).toLongValue();
+
+        final var line = codeMap.get(cspc - 1);
+
+        if (line == null) {
+            return false;
+        }
+
+        this.currentLine = line;
+
+        return line.getInstructionCode() == ir;
+    }
+
+    public void step(){
+        requireConfigured();
+        setStatus(Status.STEPPING);
+        project.getSimulator().setAutoTicking(true);
+    }
+
+    public void run(){
+        requireConfigured();
+        setStatus(Status.RUNNING);
+        project.getSimulator().setAutoTicking(true);
+    }
+
+    public void pause(){
+        requireConfigured();
+        setStatus(Status.PAUSED);
+    }
+
+    public void requireConfigured(){
+        if(status == Status.UNCONFIGURED){
+            throw new IllegalStateException("Debugger is not configured");
+        }
     }
 }

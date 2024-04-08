@@ -84,4 +84,12 @@ public class Line {
     public void setBreakpoint(boolean breakpoint) {
         this.breakpoint = breakpoint;
     }
+
+    public Integer getAddress() {
+        return instructionAddress;
+    }
+
+    public int getInstructionCode() {
+        return instructionCode;
+    }
 }

@@ -7,33 +7,26 @@ import com.cburch.logisim.circuit.SubcircuitFactory;
 import com.cburch.logisim.comp.Component;
 import com.cburch.logisim.gui.generic.LFrame;
 import com.cburch.logisim.gui.hex.HexFile;
-import com.cburch.logisim.gui.lncpu.debugger.DebuggerTextArea;
-import com.cburch.logisim.gui.lncpu.debugger.LncpuDebugger;
-import com.cburch.logisim.gui.lncpu.debugger.Status;
+import com.cburch.logisim.gui.lncpu.debugger.*;
 import com.cburch.logisim.instance.StdAttr;
 import com.cburch.logisim.prefs.AppPreferences;
 import com.cburch.logisim.proj.Project;
 import com.cburch.logisim.std.memory.MemState;
 import com.cburch.logisim.util.JFileChoosers;
-import com.cburch.logisim.util.TextLineNumber;
 
 import javax.swing.*;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DebugLncpuWindow implements Simulator.Listener {
+public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
     private final JButton stepOverBtn, stepIntoBtn, pauseResumeBtn;
 
@@ -51,7 +44,11 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
     static final String RAM_DIRECTORY = "RAM/RAM";
 
-    static final String IR_DIRECTORY = "ControlUnit/IR";
+    static final String TEXT_STEP_OVER = "Step over (F8)";
+    static final String TEXT_STEP_INTO = "Step into (F7)";
+    static final String TEXT_PAUSE = "Pause (F5)";
+    static final String TEXT_RESUME = "Resume (F5)";
+
 
     private LncpuDebugger debugger;
 
@@ -62,6 +59,7 @@ public class DebugLncpuWindow implements Simulator.Listener {
         project.getSimulator().addSimulatorListener(DebugLncpuWindow.this);
 
         this.debugger = new LncpuDebugger(project, componentDirectory);
+        this.debugger.addDebuggerListener(this);
 
         this.project = project;
         this.window = new LFrame.SubWindow(null);
@@ -77,11 +75,10 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
         // North panel
         final var debugControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        debugControlPanel.add(stepOverBtn = new JButton("Step over"));
-        debugControlPanel.add(stepIntoBtn = new JButton("Step into"));
-        debugControlPanel.add(pauseResumeBtn = new JButton("Pause"));
+        debugControlPanel.add(stepOverBtn = new JButton(TEXT_STEP_OVER));
+        debugControlPanel.add(stepIntoBtn = new JButton(TEXT_STEP_INTO));
+        debugControlPanel.add(pauseResumeBtn = new JButton(TEXT_PAUSE));
         north.add(debugControlPanel, BorderLayout.EAST);
-
         final var openFile = new JButton("Load program...");
         openFile.addActionListener(this::loadProgramPressed);
         north.add(openFile, BorderLayout.WEST);
@@ -101,6 +98,62 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
         // set buttons to an unconfigured state
         this.debbugerStatusChanged(Status.UNCONFIGURED);
+
+        stepOverBtn.addActionListener(this::stepOverPressed);
+
+        stepIntoBtn.addActionListener(this::stepIntoPressed);
+
+        pauseResumeBtn.addActionListener(this::pauseResumePressed);
+
+
+        window.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_F8, 0), "stepOver");
+        window.getRootPane().getActionMap().put("stepOver", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stepOverPressed(e);
+            }
+        });
+
+        window.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_F7, 0), "stepInto");
+        window.getRootPane().getActionMap().put("stepInto", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stepIntoPressed(e);
+            }
+        });
+
+        window.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), "pauseResume");
+        window.getRootPane().getActionMap().put("pauseResume", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                pauseResumePressed(e);
+            }
+        });
+    }
+
+    private void pauseResumePressed(ActionEvent e) {
+        if(debugger.getStatus() == Status.PAUSED){
+            debugger.run();
+            codeArea.setHighlightedLineNumber(-1);
+        } else {
+            debugger.pause();
+        }
+    }
+
+    private void stepIntoPressed(ActionEvent e) {
+        if(debugger.getStatus() == Status.PAUSED){
+            // TODO
+        }
+    }
+
+    private void stepOverPressed(ActionEvent e) {
+        if(debugger.getStatus() == Status.PAUSED){
+            debugger.step();
+            codeArea.setHighlightedLineNumber(-1);
+        }
     }
 
     private Map<String, ComponentEntry> buildComponentDirectory(Map<String, ComponentEntry> directory, Circuit circuit, CircuitState circuitState, String baseDir) {
@@ -254,17 +307,17 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
         switch (status) {
             case RUNNING:
-            case STEPPING_INTO:
-            case STEPPING_OVER:
-                stepIntoBtn.setText("Step into");
-                stepOverBtn.setText("Step over");
-                pauseResumeBtn.setText("Pause");
+            case STEPPING:
+                pauseResumeBtn.setText(TEXT_PAUSE);
                 break;
             case PAUSED:
-                stepIntoBtn.setText("Step into");
-                stepOverBtn.setText("Step over");
-                pauseResumeBtn.setText("Resume");
+                pauseResumeBtn.setText(TEXT_RESUME);
                 break;
         }
+    }
+
+    @Override
+    public void lineHit(Line line) {
+        codeArea.setHighlightedLineNumber(line.getLineNumber());
     }
 }
