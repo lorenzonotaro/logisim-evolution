@@ -256,7 +256,7 @@ public class HexFile {
     return open(dst, src, null);
   }
 
-  protected static boolean open(MemContents dst, File src, String desc) throws IOException {
+  public static boolean open(MemContents dst, File src, String desc) throws IOException {
     final var in = BufferedLineReader.forFile(src);
     try {
       final var r = new HexReader(in, dst.getLogLength(), dst.getValueWidth());
@@ -287,7 +287,7 @@ public class HexFile {
     return parse(false, src, "v2.0 raw", addrSize, wordSize).model;
   }
 
-  private static ParseResult parse(boolean interactive, String src, String desc, int addrSize, int wordSize) throws IOException {
+  public static ParseResult parse(boolean interactive, String src, String desc, int addrSize, int wordSize) throws IOException {
     final var in = BufferedLineReader.forString(src);
     try {
       final var r = new HexReader(in, addrSize, wordSize);

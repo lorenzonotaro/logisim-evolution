@@ -46,7 +46,7 @@ class FlagsInspector extends JPanel {
 
         public FlagIndicator() {
             this.status = false;
-            this.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
+            this.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         }
 
         @Override

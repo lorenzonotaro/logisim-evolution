@@ -6,9 +6,12 @@ import com.cburch.logisim.circuit.Simulator;
 import com.cburch.logisim.circuit.SubcircuitFactory;
 import com.cburch.logisim.comp.Component;
 import com.cburch.logisim.gui.generic.LFrame;
+import com.cburch.logisim.gui.hex.HexFile;
 import com.cburch.logisim.instance.StdAttr;
 import com.cburch.logisim.prefs.AppPreferences;
 import com.cburch.logisim.proj.Project;
+import com.cburch.logisim.std.memory.MemState;
+import com.cburch.logisim.std.memory.RamState;
 import com.cburch.logisim.util.JFileChoosers;
 import com.cburch.logisim.util.TextLineNumber;
 
@@ -23,6 +26,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DebugLncpuWindow implements Simulator.Listener {
+
+    private final JButton stepOverBtn, stepIntoBtn, pauseResumeBtn;
+
+    private static enum Status{
+        UNCONFIGURED, RUNNING, STEPPING_INTO, STEPPING_OVER, PAUSED
+    }
+
+    private Status status;
+
     private final Project project;
     private final LFrame window;
     private final JTextArea codeArea;
@@ -57,8 +69,9 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
         // North panel
         final var debugControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        debugControlPanel.add(new JButton("Step"));
-        debugControlPanel.add(new JButton("Run"));
+        debugControlPanel.add(stepOverBtn = new JButton("Step over"));
+        debugControlPanel.add(stepIntoBtn = new JButton("Step into"));
+        debugControlPanel.add(pauseResumeBtn = new JButton("Pause"));
         north.add(debugControlPanel, BorderLayout.EAST);
 
         final var openFile = new JButton("Load program...");
@@ -106,12 +119,6 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
         var ret = fc.showOpenDialog(this.window);
 
-        if (ret == JFileChooser.APPROVE_OPTION) {
-            var file = fc.getSelectedFile();
-            lastProgramOpened = file;
-            loadProgram(file);
-        }
-
         if(this.tempDir == null) {
             try {
                 tempDir = Files.createTempDirectory("lncpu").toFile();
@@ -120,6 +127,12 @@ public class DebugLncpuWindow implements Simulator.Listener {
             }
             // set to delete temporary directory and its contents
             tempDir.deleteOnExit();
+        }
+
+        if (ret == JFileChooser.APPROVE_OPTION) {
+            var file = fc.getSelectedFile();
+            lastProgramOpened = file;
+            loadProgram(file);
         }
     }
 
@@ -156,15 +169,28 @@ public class DebugLncpuWindow implements Simulator.Listener {
                 return;
             }
 
-            var program = Files.readAllBytes(new File("a.out").toPath());
+            // load the program into the ROM
+            var rom = componentDirectory.get(ROM_DIRECTORY);
+            if(rom == null) {
+                JOptionPane.showMessageDialog(this.window, "ROM not found in the circuit", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-            var immediateCode = Files.readString(new File("a.immediate.txt").toPath());
+            var memState = (MemState) rom.state.getData(rom.component);
+            HexFile.open(memState.getContents(), new File(tempDir, "a.out"), "Binary big-endian");
+
+            var immediateCode = Files.readString(new File(tempDir,"a.immediate.txt").toPath());
 
             codeArea.setText(immediateCode);
+
+            project.getSimulator().reset();
+
         } catch (IOException | InterruptedException e) {
             JOptionPane.showMessageDialog(this.window,  "An error occurred while loading the program: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+
 
     public boolean isVisible() {
         if (window != null) {
@@ -199,6 +225,36 @@ public class DebugLncpuWindow implements Simulator.Listener {
         if(e.didTick()){
             inspector.update();
             window.repaint();
+        }
+    }
+
+
+    public void setStatus(Status status) {
+        this.status = status;
+
+        if(status == Status.UNCONFIGURED){
+            stepIntoBtn.setEnabled(false);
+            stepOverBtn.setEnabled(false);
+            pauseResumeBtn.setEnabled(false);
+        } else {
+            stepIntoBtn.setEnabled(true);
+            stepOverBtn.setEnabled(true);
+            pauseResumeBtn.setEnabled(true);
+        }
+
+        switch (status) {
+            case RUNNING:
+            case STEPPING_INTO:
+            case STEPPING_OVER:
+                stepIntoBtn.setText("Step into");
+                stepOverBtn.setText("Step over");
+                pauseResumeBtn.setText("Pause");
+                break;
+            case PAUSED:
+                stepIntoBtn.setText("Step into");
+                stepOverBtn.setText("Step over");
+                pauseResumeBtn.setText("Resume");
+                break;
         }
     }
 

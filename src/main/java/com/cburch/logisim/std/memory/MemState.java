@@ -18,7 +18,7 @@ import com.cburch.logisim.util.StringUtil;
 import java.awt.Color;
 import java.awt.Graphics;
 
-class MemState implements InstanceData, Cloneable, HexModelListener {
+public class MemState implements InstanceData, Cloneable, HexModelListener {
 
   private MemContents contents;
   private long curScroll = 0;
