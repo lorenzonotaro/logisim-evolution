@@ -26,6 +26,7 @@ public class LncpuDebugger {
     private String immediateCode;
 
     private Line currentLine;
+    private Line stepOverTarget;
 
     public LncpuDebugger(Project project, Map<String, ComponentEntry> componentDirectory) {
         this.project = project;
@@ -96,10 +97,13 @@ public class LncpuDebugger {
     public void tick(Simulator.Event e) {
         var lastLine = currentLine;
         if (checkSyncronized()){
-            if(status == Status.STEPPING && lastLine != currentLine){
+            if(status == Status.STEPPING_INTO && lastLine != currentLine){
                 setStatus(Status.PAUSED);
                 fireLineHit(currentLine);
-            }else if(status == Status.RUNNING && currentLine.hasBreakpoint()){
+            }else if(status == Status.STEPPING_OVER && lastLine != currentLine && currentLine == stepOverTarget){
+                setStatus(Status.PAUSED);
+                fireLineHit(currentLine);
+            }else if(status == Status.RUNNING && currentLine.hasBreakpoint() && lastLine != currentLine){
                 setStatus(Status.PAUSED);
                 fireLineHit(currentLine);
             }else if(status == Status.PAUSED){
@@ -129,10 +133,38 @@ public class LncpuDebugger {
         return line.getInstructionCode() == ir;
     }
 
-    public void step(){
+    public void stepInto(){
         requireConfigured();
-        setStatus(Status.STEPPING);
+        setStatus(Status.STEPPING_INTO);
         project.getSimulator().setAutoTicking(true);
+    }
+
+    public void stepOver(){
+        requireConfigured();
+
+        if(currentLine == null)
+            return;
+
+        if(currentLine.getInstructionName().equals("lcall")){
+            stepOverTarget = getNextLine();
+            setStatus(Status.STEPPING_OVER);
+            project.getSimulator().setAutoTicking(true);
+        }else{
+            stepInto();
+        }
+
+    }
+
+    private Line getNextLine() {
+        if(currentLine == null)
+            return null;
+        for (int i = currentLine.getLineNumber() + 1; i < lines.length + 1; i++) {
+            Line line = lines[i - 1];
+            if (line != null) {
+                return line;
+            }
+        }
+        return null;
     }
 
     public void run(){

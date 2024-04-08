@@ -18,7 +18,6 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
@@ -145,13 +144,15 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
     private void stepIntoPressed(ActionEvent e) {
         if(debugger.getStatus() == Status.PAUSED){
-            // TODO
+            debugger.stepInto();
+            codeArea.setHighlightedLineNumber(-1);
         }
+
     }
 
     private void stepOverPressed(ActionEvent e) {
         if(debugger.getStatus() == Status.PAUSED){
-            debugger.step();
+            debugger.stepOver();
             codeArea.setHighlightedLineNumber(-1);
         }
     }
@@ -216,7 +217,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             process.waitFor();
 
             if(process.exitValue() != 0) {
-                JOptionPane.showMessageDialog(this.window, String.format("Compilation failed for file '%s': \n%s", file.getName(), process.getErrorStream()), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this.window, String.format("Compilation failed for file '%s': \n%s", file.getName(), new String(process.getErrorStream().readAllBytes())), "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -226,7 +227,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             process.waitFor();
 
             if(process.exitValue() != 0) {
-                JOptionPane.showMessageDialog(this.window, String.format("Immediate code generation failed for file '%s': \n%s", file.getName(), process.getErrorStream()), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this.window, String.format("Immediate code generation failed for file '%s': \n%s", file.getName(), new String(process.getErrorStream().readAllBytes())), "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -307,7 +308,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
         switch (status) {
             case RUNNING:
-            case STEPPING:
+            case STEPPING_INTO:
                 pauseResumeBtn.setText(TEXT_PAUSE);
                 break;
             case PAUSED:

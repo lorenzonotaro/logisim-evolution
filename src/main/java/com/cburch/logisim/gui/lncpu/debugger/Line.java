@@ -16,7 +16,7 @@ public class Line {
 
     private final int[] params;
 
-    private final String instruction_name;
+    private final String instructionName;
 
     private final String[] labels;
 
@@ -31,7 +31,7 @@ public class Line {
         if (matcher.matches()){
             this.instructionAddress = Integer.parseInt(matcher.group("address"), 16);
             this.instructionCode = Integer.parseInt(matcher.group("instructionCode"), 16);
-            this.instruction_name = matcher.group("instructionName");
+            this.instructionName = matcher.group("instructionName");
             String parametersGroup = matcher.group("parameters");
 
             if (parametersGroup == null || parametersGroup.isBlank()) {
@@ -91,5 +91,9 @@ public class Line {
 
     public int getInstructionCode() {
         return instructionCode;
+    }
+
+    public String getInstructionName() {
+        return instructionName;
     }
 }
