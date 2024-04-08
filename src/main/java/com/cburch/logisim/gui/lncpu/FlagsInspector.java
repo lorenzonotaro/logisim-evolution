@@ -10,7 +10,7 @@ class FlagsInspector extends JPanel {
         this.setLayout(new GridLayout(flags.length, 1));
         this.setBorder(BorderFactory.createTitledBorder("Flags"));
 
-        String[] FLAGS_LABELS = {"I (interrupt)", "Z (zero)", "N (negative)", "C (carry)"};
+        String[] FLAGS_LABELS = {"I (interrupt)", "N (negative)", "Z (zero)", "C (carry)"};
 
         for (int i = 0; i < flags.length; i++) {
             flags[i] = new FlagIndicator();
