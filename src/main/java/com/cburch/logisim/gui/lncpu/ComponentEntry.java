@@ -3,7 +3,7 @@ package com.cburch.logisim.gui.lncpu;
 import com.cburch.logisim.circuit.CircuitState;
 import com.cburch.logisim.comp.Component;
 
-class ComponentEntry {
+public class ComponentEntry {
     Component component;
 
     CircuitState state;

@@ -7,18 +7,26 @@ import com.cburch.logisim.circuit.SubcircuitFactory;
 import com.cburch.logisim.comp.Component;
 import com.cburch.logisim.gui.generic.LFrame;
 import com.cburch.logisim.gui.hex.HexFile;
+import com.cburch.logisim.gui.lncpu.debugger.DebuggerTextArea;
+import com.cburch.logisim.gui.lncpu.debugger.LncpuDebugger;
+import com.cburch.logisim.gui.lncpu.debugger.Status;
 import com.cburch.logisim.instance.StdAttr;
 import com.cburch.logisim.prefs.AppPreferences;
 import com.cburch.logisim.proj.Project;
 import com.cburch.logisim.std.memory.MemState;
-import com.cburch.logisim.std.memory.RamState;
 import com.cburch.logisim.util.JFileChoosers;
 import com.cburch.logisim.util.TextLineNumber;
 
 import javax.swing.*;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,15 +37,9 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
     private final JButton stepOverBtn, stepIntoBtn, pauseResumeBtn;
 
-    private static enum Status{
-        UNCONFIGURED, RUNNING, STEPPING_INTO, STEPPING_OVER, PAUSED
-    }
-
-    private Status status;
-
     private final Project project;
     private final LFrame window;
-    private final JTextArea codeArea;
+    private final DebuggerTextArea codeArea;
     private final Inspector inspector;
     private File tempDir;
 
@@ -51,9 +53,15 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
     static final String IR_DIRECTORY = "ControlUnit/IR";
 
+    private LncpuDebugger debugger;
+
     public DebugLncpuWindow(Project project) {
 
         componentDirectory = buildComponentDirectory(new HashMap<>(), project.getCurrentCircuit(), project.getCircuitState(),"");
+
+        project.getSimulator().addSimulatorListener(DebugLncpuWindow.this);
+
+        this.debugger = new LncpuDebugger(project, componentDirectory);
 
         this.project = project;
         this.window = new LFrame.SubWindow(null);
@@ -80,19 +88,19 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
         //Main panel
 
-        codeArea = new JTextArea();
+        codeArea = new DebuggerTextArea();
         codeArea.setFont(new Font("monospaced", Font.PLAIN, AppPreferences.getScaled(8)));
         codeArea.setEditable(false);
+
         final var scroller = new JScrollPane(codeArea);
-        scroller.setRowHeaderView(new TextLineNumber(codeArea));
+        scroller.setRowHeaderView(new DebuggerLineNumber(codeArea, debugger));
         main.add(scroller, BorderLayout.CENTER);
 
         inspector = new Inspector(project, componentDirectory);
         main.add(inspector, BorderLayout.EAST);
 
-        project.getSimulator().addSimulatorListener(this);
-
-        project.getSimulator().addSimulatorListener(this);
+        // set buttons to an unconfigured state
+        this.debbugerStatusChanged(Status.UNCONFIGURED);
     }
 
     private Map<String, ComponentEntry> buildComponentDirectory(Map<String, ComponentEntry> directory, Circuit circuit, CircuitState circuitState, String baseDir) {
@@ -183,8 +191,11 @@ public class DebugLncpuWindow implements Simulator.Listener {
 
             codeArea.setText(immediateCode);
 
-            project.getSimulator().reset();
-
+            try{
+                debugger.init(immediateCode);
+            } catch(IllegalArgumentException e){
+                JOptionPane.showMessageDialog(this.window, "An error occurred while parsing the immediate code: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         } catch (IOException | InterruptedException e) {
             JOptionPane.showMessageDialog(this.window,  "An error occurred while loading the program: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -225,13 +236,12 @@ public class DebugLncpuWindow implements Simulator.Listener {
         if(e.didTick()){
             inspector.update();
             window.repaint();
+            debugger.tick(e);
         }
     }
 
 
-    public void setStatus(Status status) {
-        this.status = status;
-
+    public void debbugerStatusChanged(Status status) {
         if(status == Status.UNCONFIGURED){
             stepIntoBtn.setEnabled(false);
             stepOverBtn.setEnabled(false);
@@ -257,5 +267,4 @@ public class DebugLncpuWindow implements Simulator.Listener {
                 break;
         }
     }
-
 }
