@@ -1,10 +1,11 @@
-package com.cburch.logisim.gui.lncpu.debugger;
+package com.cburch.logisim.gui.lncpu;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.Highlighter;
 import java.awt.*;
+import java.awt.geom.Rectangle2D;
 
 public class DebuggerTextArea extends JTextArea {
     private int highlightedLineNumber = -1;
@@ -49,6 +50,12 @@ public class DebuggerTextArea extends JTextArea {
                     getHighlighter().removeAllHighlights();
                     Highlighter.HighlightPainter painter = new DefaultHighlighter.DefaultHighlightPainter(hitLineColor);
                     getHighlighter().addHighlight(startOffset, endOffset, painter);
+
+            // scroll to line
+            Rectangle2D viewRect = modelToView2D(startOffset);
+            if (viewRect != null) {
+                scrollRectToVisible(viewRect.getBounds());
+            }
 
             }
         } catch (BadLocationException e) {
