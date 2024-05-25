@@ -193,8 +193,26 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
         if (ret == JFileChooser.APPROVE_OPTION) {
             var file = fc.getSelectedFile();
+
+            var linkerFile = new File(file.getParent(), "linker.cfg");
+            // check if linker.cfg file is present next to the selected file
+            if(!linkerFile.exists()){
+                fc = JFileChoosers.createSelected(file);
+                fc.setFileFilter(new FileNameExtensionFilter("linker config file", "cfg"));
+                fc.setDialogTitle("Select linker config file");
+                fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                fc.setMultiSelectionEnabled(false);
+                fc.setAcceptAllFileFilterUsed(false);
+                ret = fc.showOpenDialog(this.window);
+                if(ret == JFileChooser.APPROVE_OPTION){
+                    linkerFile = fc.getSelectedFile();
+                } else {
+                    return;
+                }
+            }
+
             lastProgramOpened = file;
-            loadProgram(file);
+            loadProgram(file, linkerFile);
         }
     }
 
@@ -208,26 +226,25 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     }
 
 
-    private void loadProgram(File file) {
+    private void loadProgram(File file, File linkerFile) {
         try {
             // exec cmd lnasm on the given file to generate binary and immediate code
-            var cmd = new ProcessBuilder("cmd", "/C", "lnasm", file.getAbsolutePath(), "-o", "a.out", "-f", "binary");
+            String[] command;
+
+            if(System.getProperty("os.name").toLowerCase().contains("windows")) {
+                command = new String[]{"cmd", "/C", "lnasm", "\"" + file.getAbsolutePath() +"\"", "-oB", "a.out", "-oI", "a.immediate.txt", "-lf", linkerFile.getAbsolutePath()};
+            } else {
+                command = new String[]{"bash", "-c", "lnasm", "\"" + file.getAbsolutePath() + "\"", "-oB", "a.out", "-oI", "a.immediate.txt", "-lf", linkerFile.getAbsolutePath()};
+            }
+
+
+            var cmd = new ProcessBuilder(command);
             cmd.directory(tempDir);
             var process = cmd.start();
             process.waitFor();
 
             if(process.exitValue() != 0) {
                 JOptionPane.showMessageDialog(this.window, String.format("Compilation failed for file '%s': \n%s", file.getName(), new String(process.getErrorStream().readAllBytes())), "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            cmd = new ProcessBuilder("cmd", "/C", "lnasm", file.getAbsolutePath(), "-o", "a.immediate.txt", "-f", "immediate");
-            cmd.directory(tempDir);
-            process = cmd.start();
-            process.waitFor();
-
-            if(process.exitValue() != 0) {
-                JOptionPane.showMessageDialog(this.window, String.format("Immediate code generation failed for file '%s': \n%s", file.getName(), new String(process.getErrorStream().readAllBytes())), "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 

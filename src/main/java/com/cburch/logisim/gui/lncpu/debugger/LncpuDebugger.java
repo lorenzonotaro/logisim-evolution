@@ -145,7 +145,7 @@ public class LncpuDebugger {
         if(currentLine == null)
             return;
 
-        if(currentLine.getInstructionName().equals("lcall")){
+        if(currentLine.getInstructionName().startsWith("lcall")){
             stepOverTarget = getNextLine();
             setStatus(Status.STEPPING_OVER);
             project.getSimulator().setAutoTicking(true);

@@ -5,7 +5,7 @@ import java.util.regex.*;
 
 public class Line {
 
-    private static final Pattern REGEX_MATCHER = Pattern.compile("^\\s*(?<labels>[a-zA-Z0-9_$\\s:]*:)?\\s*(?<address>[0-9a-zA-Z]{6}):\\s*(?<instructionCode>[0-9a-fA-F]{2})\\s*\\((?<instructionName>[a-z0-9_]+)\\)\\s*(?<parameters>[0-9a-fA-F\\s]*)\\s+$");
+    private static final Pattern REGEX_MATCHER = Pattern.compile("^\\s*(?<labels>[a-zA-Z0-9_$\\s,]*:)?\\s*(?<address>[0-9a-zA-Z]{6}):\\s*(?<instructionCode>[0-9a-fA-F]{2})\\s*\\((?<instructionName>[a-z0-9_]+)\\)\\s*(?<parameters>[0-9a-fA-F\\s]*)\\s+$");
 
     private final int lineNumber;
     private final String line;
@@ -44,7 +44,7 @@ public class Line {
             if (labelsGroup == null || labelsGroup.isBlank()) {
                 this.labels = new String[0];
             }else{
-                this.labels = Arrays.stream(labelsGroup.split(":")).filter(s -> !s.isBlank()).map(String::trim).toArray(String[]::new);
+                this.labels = Arrays.stream(labelsGroup.replace(":","").split(",")).filter(s -> !s.isBlank()).map(String::trim).toArray(String[]::new);
             }
         }else{
             throw new IllegalArgumentException("Malformed immediate lnasm line: " + line);
