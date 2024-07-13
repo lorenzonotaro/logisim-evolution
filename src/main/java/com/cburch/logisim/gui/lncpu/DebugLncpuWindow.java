@@ -37,7 +37,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
     private final Map<String, ComponentEntry> componentDirectory;
 
-    private File lastProgramOpened;
+    private File lastProgramOpened, recentEeepromsDir;
 
     static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
 
@@ -79,8 +79,15 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
         debugControlPanel.add(pauseResumeBtn = new JButton(TEXT_PAUSE));
         north.add(debugControlPanel, BorderLayout.EAST);
         final var openFile = new JButton("Load program...");
+        final var loadCtrEeproms = new JButton("Load CU EEPROMs...");
+
+        final var flowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+        flowPanel.add(loadCtrEeproms);
+        flowPanel.add(openFile);
         openFile.addActionListener(this::loadProgramPressed);
-        north.add(openFile, BorderLayout.WEST);
+        loadCtrEeproms.addActionListener(this::loadCtrEepromsPressed);
+        north.add(flowPanel, BorderLayout.WEST);
 
         //Main panel
 
@@ -133,6 +140,47 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
         });
     }
 
+    private void loadCtrEepromsPressed(ActionEvent actionEvent) {
+        var fc = JFileChoosers.createAt(getRecentEepromsDir());
+
+        fc.setDialogTitle("Select directory containing .bin files");
+        fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        fc.setMultiSelectionEnabled(false);
+        fc.setAcceptAllFileFilterUsed(false);
+
+        var ret = fc.showOpenDialog(this.window);
+
+        if (ret == JFileChooser.APPROVE_OPTION) {
+            var dir = fc.getSelectedFile();
+
+            recentEeepromsDir = dir;
+
+            var files = dir.listFiles((dir1, name) -> name.matches("EEPROM[0-9]+\\.bin"));
+
+            if(files == null || files.length == 0){
+                JOptionPane.showMessageDialog(this.window, "No EEPROM files found in the selected directory", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            for (var file : files) {
+                var eeprom = componentDirectory.get("ControlUnit/EEPROM" + file.getName().charAt(6));
+                if (eeprom == null) {
+                    JOptionPane.showMessageDialog(this.window, "EEPROM not found in the circuit", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                var memState = (MemState) eeprom.state.getData(eeprom.component);
+                try {
+                    HexFile.open(memState.getContents(), file, "Binary big-endian");
+                } catch (IOException e) {
+                    JOptionPane.showMessageDialog(this.window, "An error occurred while loading the EEPROM file: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            JOptionPane.showMessageDialog(this.window, "EEPROMs loaded successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
     private void pauseResumePressed(ActionEvent e) {
         if(debugger.getStatus() == Status.PAUSED){
             debugger.run();
@@ -171,7 +219,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     }
 
     private void loadProgramPressed(ActionEvent actionEvent) {
-        var fc = JFileChoosers.createSelected(getRecent());
+        var fc = JFileChoosers.createSelected(getRecentProgram());
 
         fc.setFileFilter(new FileNameExtensionFilter("lnasm file", "lnasm"));
         fc.setDialogTitle("Load program");
@@ -216,13 +264,21 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
         }
     }
 
-    private File getRecent() {
-        if (lastProgramOpened == null) {
+    private File getRecentProgram() {
+        return getRecent(lastProgramOpened);
+    }
+
+    private File getRecentEepromsDir(){
+        return getRecent(recentEeepromsDir);
+    }
+
+    private File getRecent(File recentFile) {
+        if (recentFile == null) {
             final var lf = (project == null ? null : project.getLogisimFile());
             final var ld = (lf == null ? null : lf.getLoader());
             return (ld == null ? new File(System.getProperty("user.home")) : ld.getCurrentDirectory());
         }
-        return lastProgramOpened;
+        return recentFile;
     }
 
 
