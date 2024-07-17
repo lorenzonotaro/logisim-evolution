@@ -1,14 +1,9 @@
-package com.cburch.logisim.gui.lncpu;
+package com.cburch.logisim.gui.lncpu.debugger;
 
-import com.cburch.logisim.circuit.Circuit;
-import com.cburch.logisim.circuit.CircuitState;
 import com.cburch.logisim.circuit.Simulator;
-import com.cburch.logisim.circuit.SubcircuitFactory;
-import com.cburch.logisim.comp.Component;
 import com.cburch.logisim.gui.generic.LFrame;
 import com.cburch.logisim.gui.hex.HexFile;
-import com.cburch.logisim.gui.lncpu.debugger.*;
-import com.cburch.logisim.instance.StdAttr;
+import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
 import com.cburch.logisim.prefs.AppPreferences;
 import com.cburch.logisim.proj.Project;
 import com.cburch.logisim.std.memory.MemState;
@@ -22,7 +17,6 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.Map;
 
 public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
@@ -35,7 +29,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     private final Inspector inspector;
     private File tempDir;
 
-    private final Map<String, ComponentEntry> componentDirectory;
+    private final Map<String, ComponentDirectory.Entry> componentDirectory;
 
     private File lastProgramOpened, recentEeepromsDir;
 
@@ -53,7 +47,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
     public DebugLncpuWindow(Project project) {
 
-        componentDirectory = buildComponentDirectory(new HashMap<>(), project.getCurrentCircuit(), project.getCircuitState(),"");
+        componentDirectory = ComponentDirectory.makeComponentDirectory(project);
 
         project.getSimulator().addSimulatorListener(DebugLncpuWindow.this);
 
@@ -203,19 +197,6 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             debugger.stepOver();
             codeArea.setHighlightedLineNumber(-1);
         }
-    }
-
-    private Map<String, ComponentEntry> buildComponentDirectory(Map<String, ComponentEntry> directory, Circuit circuit, CircuitState circuitState, String baseDir) {
-        for(Component comp : circuit.getNonWires()){
-            String label = comp.getAttributeSet().getValue(StdAttr.LABEL);
-            String thisComp = (label == null || label.length() == 0) ? comp.getFactory().getDisplayName() : label;
-            String thisName = baseDir + thisComp;
-            directory.put(thisName, new ComponentEntry(comp, circuitState));
-            if (comp.getFactory() instanceof SubcircuitFactory subcircuitFactory){
-                buildComponentDirectory(directory, subcircuitFactory.getSubcircuit(),subcircuitFactory.getSubstate(circuitState, comp), thisName + "/");
-            }
-        }
-        return directory;
     }
 
     private void loadProgramPressed(ActionEvent actionEvent) {

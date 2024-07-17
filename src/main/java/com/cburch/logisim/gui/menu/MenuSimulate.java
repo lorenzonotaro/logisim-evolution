@@ -15,7 +15,8 @@ import com.cburch.logisim.circuit.CircuitEvent;
 import com.cburch.logisim.circuit.CircuitListener;
 import com.cburch.logisim.circuit.CircuitState;
 import com.cburch.logisim.circuit.Simulator;
-import com.cburch.logisim.gui.lncpu.DebugLncpuWindow;
+import com.cburch.logisim.gui.lncpu.debugger.DebugLncpuWindow;
+import com.cburch.logisim.gui.lncpu.test.TestLncpuWindow;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -58,10 +59,12 @@ public class MenuSimulate extends Menu {
   private final JMenuItem test = new JMenuItem();
   private final JMenuItem assemblyWindow = new JMenuItem();
 
-  private final JMenuItem debugLncpu = new JMenuItem();
+  private final JMenuItem debugLncpu = new JMenuItem(), testLncpu = new JMenuItem();
 
   AssemblyWindow assWin = null;
   DebugLncpuWindow debugLncpuWin = null;
+
+  TestLncpuWindow testLncpuWin = null;
   private CircuitState currentState = null;
   private CircuitState bottomState = null;
   private Simulator currentSim = null;
@@ -119,6 +122,7 @@ public class MenuSimulate extends Menu {
     add(assemblyWindow);
     addSeparator();
     add(debugLncpu);
+    add(testLncpu);
 
     setEnabled(false);
     runToggle.setEnabled(false);
@@ -151,6 +155,7 @@ public class MenuSimulate extends Menu {
     test.addActionListener(myListener);
     assemblyWindow.addActionListener(myListener);
     debugLncpu.addActionListener(myListener);
+    testLncpu.addActionListener(myListener);
 
     computeEnabled();
   }
@@ -220,6 +225,7 @@ public class MenuSimulate extends Menu {
     test.setText(S.get("simulateTestItem"));
     assemblyWindow.setText("Assembly viewer");
     debugLncpu.setText("Debug lncpu...");
+    testLncpu.setText("Test lncpu architecture...");
   }
 
   private void recreateStateMenu(JMenu menu, List<CircuitStateMenuItem> items, int code) {
@@ -402,11 +408,16 @@ public class MenuSimulate extends Menu {
       } else if (src == debugLncpu){
         if (debugLncpuWin == null) {
           debugLncpuWin = new DebugLncpuWindow(proj);
-          debugLncpuWin.setVisible(true);
-        } else {
-          debugLncpuWin.setVisible(true);
-          debugLncpuWin.toFront();
         }
+        debugLncpuWin.setVisible(true);
+        debugLncpuWin.toFront();
+
+      } else if (src == testLncpu){
+        if (testLncpuWin == null) {
+          testLncpuWin = new TestLncpuWindow(proj);
+        }
+        testLncpuWin.setVisible(true);
+        testLncpuWin.toFront();
       }
     }
 

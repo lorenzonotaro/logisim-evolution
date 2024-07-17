@@ -1,8 +1,8 @@
 package com.cburch.logisim.gui.lncpu.debugger;
 
 import com.cburch.logisim.circuit.Simulator;
-import com.cburch.logisim.gui.lncpu.ComponentEntry;
-import com.cburch.logisim.gui.lncpu.WatchedSignal;
+import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
+import com.cburch.logisim.gui.lncpu.util.WatchedSignal;
 import com.cburch.logisim.proj.Project;
 
 import java.util.ArrayList;
@@ -13,7 +13,7 @@ import java.util.Map;
 public class LncpuDebugger {
 
     private final Project project;
-    private final ComponentEntry irEntry, cspcEntry;
+    private final ComponentDirectory.Entry irEntry, cspcEntry;
     private Status status;
 
     private final List<DebuggerListener> debuggerListeners = new ArrayList<>();
@@ -28,7 +28,7 @@ public class LncpuDebugger {
     private Line currentLine;
     private Line stepOverTarget;
 
-    public LncpuDebugger(Project project, Map<String, ComponentEntry> componentDirectory) {
+    public LncpuDebugger(Project project, Map<String, ComponentDirectory.Entry> componentDirectory) {
         this.project = project;
         setStatus(Status.UNCONFIGURED);
 

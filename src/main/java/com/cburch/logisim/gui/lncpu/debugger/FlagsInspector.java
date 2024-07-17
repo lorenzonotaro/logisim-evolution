@@ -1,4 +1,4 @@
-package com.cburch.logisim.gui.lncpu;
+package com.cburch.logisim.gui.lncpu.debugger;
 
 import javax.swing.*;
 import java.awt.*;

@@ -1,9 +1,8 @@
-package com.cburch.logisim.gui.lncpu;
+package com.cburch.logisim.gui.lncpu.util;
 
 import com.cburch.logisim.circuit.CircuitState;
 import com.cburch.logisim.comp.Component;
 import com.cburch.logisim.data.Value;
-import com.cburch.logisim.std.memory.MemContents;
 import com.cburch.logisim.std.memory.RegisterData;
 import com.cburch.logisim.std.wiring.Pin;
 
@@ -14,6 +13,8 @@ public enum WatchedSignal {
     RB("RB/ASYNC_OUT", "RB", 8, false, WatchedSignal::pinValueGetter),
     RC("RC/ASYNC_OUT", "RC", 8, false, WatchedSignal::pinValueGetter),
     RD("RD/ASYNC_OUT", "RD", 8, false, WatchedSignal::pinValueGetter),
+
+    NOT_HLT("ControlUnit/NOT_HLT", "HLT", 1, false, WatchedSignal::pinValueGetter),
 
     CS_PC("CSPC/CS_PC", "CS:PC", 16, false, WatchedSignal::pinValueGetter),
 

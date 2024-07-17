@@ -7,10 +7,7 @@
  * This is free software released under GNU GPLv3 license
  */
 
-package com.cburch.logisim.gui.lncpu;
-
-import com.cburch.logisim.gui.lncpu.debugger.Line;
-import com.cburch.logisim.gui.lncpu.debugger.LncpuDebugger;
+package com.cburch.logisim.gui.lncpu.debugger;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -20,7 +17,6 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.HashMap;

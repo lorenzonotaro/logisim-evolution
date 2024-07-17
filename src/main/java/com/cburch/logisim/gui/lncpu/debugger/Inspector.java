@@ -1,10 +1,11 @@
-package com.cburch.logisim.gui.lncpu;
+package com.cburch.logisim.gui.lncpu.debugger;
 
 import com.cburch.logisim.gui.hex.HexFrame;
+import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
+import com.cburch.logisim.gui.lncpu.util.WatchedSignal;
 import com.cburch.logisim.prefs.AppPreferences;
 import com.cburch.logisim.proj.Project;
 import com.cburch.logisim.std.memory.Mem;
-import com.cburch.logisim.std.memory.Ram;
 import com.cburch.logisim.std.memory.RamState;
 
 import javax.swing.*;
@@ -14,13 +15,13 @@ import java.util.Map;
 
 public class Inspector extends JPanel {
     private final Project project;
-    private final Map<String, ComponentEntry> componentsDirectory;
+    private final Map<String, ComponentDirectory.Entry> componentsDirectory;
 
     private final JTextField ra, rb, rc, rd;
     private final JTextField ss, sp, cspc, ir;
     private final FlagsInspector flags;
     private final StackInspector stack;
-    public Inspector(Project project, Map<String, ComponentEntry> componentDirectory){
+    public Inspector(Project project, Map<String, ComponentDirectory.Entry> componentDirectory){
         this.project = project;
         this.componentsDirectory = componentDirectory;
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -133,7 +134,7 @@ public class Inspector extends JPanel {
                 WatchedSignal.SP.valueGetter.apply(spEntry.component, spEntry.state).toLongValue());
     }
 
-    private void setValue(JTextField textField, Map<String, ComponentEntry> componentsDirectory, WatchedSignal signal) {
+    private void setValue(JTextField textField, Map<String, ComponentDirectory.Entry> componentsDirectory, WatchedSignal signal) {
         var entry = componentsDirectory.get(signal.directory);
         long value = signal.valueGetter.apply(entry.component, entry.state).toLongValue();
         String formatted = null;

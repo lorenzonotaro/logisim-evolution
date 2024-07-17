@@ -1,4 +1,4 @@
-package com.cburch.logisim.gui.lncpu;
+package com.cburch.logisim.gui.lncpu.debugger;
 
 import com.cburch.logisim.std.memory.MemContents;
 import com.cburch.logisim.util.TextLineNumber;
