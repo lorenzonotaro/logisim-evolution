@@ -22,11 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestLncpuWindow{
-
-    static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
-
-    static final String RESET_BUTTON_DIRECTORY = "RESET_BTN";
+public class TestLncpuWindow implements ILogger, ITestSuiteListener {
 
     private final Project project;
     private final JButton runButton, stopButton;
@@ -39,22 +35,19 @@ public class TestLncpuWindow{
 
     private File recent;
 
-    private File tempDir;
 
-    private volatile boolean stopRequested = false, simulationRunning = false;
-
-    private final ComponentDirectory.Entry notHltEntry, romEntry;
 
     private Object lock;
+
+    private TestSuite suite;
 
     public TestLncpuWindow(Project project) {
         this.project = project;
         this.componentDirectory = ComponentDirectory.makeComponentDirectory(project);
-        this.notHltEntry = componentDirectory.get(WatchedSignal.NOT_HLT.directory);
-        this.romEntry = componentDirectory.get(ROM_DIRECTORY);
+
         window = new LFrame.SubWindow(null);
         window.setTitle("Test Lncpu");
-        window.setMinimumSize(new Dimension(400, 300));
+        window.setMinimumSize(new Dimension(800, 600));
 
         JPanel contentPane = new JPanel(new BorderLayout());
 
@@ -71,30 +64,26 @@ public class TestLncpuWindow{
 
         this.outputArea = new JTextArea();
         this.outputArea.setEditable(false);
+        outputArea.setFont(new Font("monospaced", Font.PLAIN, 12));
+        outputArea.setForeground(Color.WHITE);
+        outputArea.setBackground(Color.BLACK);
+
+        final var caret = (DefaultCaret) outputArea.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+
         contentPane.add(new JScrollPane(outputArea, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED), BorderLayout.CENTER);
-
-        window = new LFrame.SubWindow(null);
-        window.setTitle("Test Lncpu");
-        window.setMinimumSize(new Dimension(400, 300));
-
 
         window.setContentPane(contentPane);
     }
 
-    private void stop(ActionEvent __) {
-        this.stopRequested = true;
+    private void stop(ActionEvent actionEvent) {
+        if (suite != null) {
+            suite.stop();
+        }
     }
 
     private void run(ActionEvent __) {
         outputArea.setText("");
-
-        outputArea.setFont(new Font("monospaced", Font.PLAIN, 12));
-        outputArea.setForeground(Color.WHITE);
-        outputArea.setBackground(Color.BLACK);
-        final var caret = (DefaultCaret) outputArea.getCaret();
-        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-
-        this.stopRequested = false;
 
         // Select folder containing tests
         var fc = JFileChoosers.createAt(recent == null ? project.getLogisimFile().getLoader().getMainFile().getParentFile() : recent);
@@ -107,64 +96,30 @@ public class TestLncpuWindow{
             return;
         }
 
-        runButton.setEnabled(false);
-        stopButton.setEnabled(true);
-
         recent = fc.getSelectedFile();
 
-        runTests(recent, project);
-
-        runButton.setEnabled(true);
-        stopButton.setEnabled(false);
-
-        this.stopRequested = false;
-    }
-
-    private void runTests(File directory, Project project) {
-        printf("Parsing tests...\n");
-
-        var tests = new ArrayList<>();
-
-        var linkerFile = new File(directory, "linker.cfg");
-
-        if(!linkerFile.exists()) {
-            printf("linker.cfg not found.\n");
+        if (recent == null || recent.isFile()) {
             return;
         }
 
-        var testsInDir = directory.listFiles(File::isDirectory);
+        var suiteThread = new Thread(() -> {
+            TestSuite suite = new TestSuite(recent, componentDirectory, project, this, this);
 
-        if (testsInDir == null) {
-            printf("No tests found.\n");
-            return;
-        }
-
-        // for each subdirectory
-        for (var subDir : testsInDir) {
-            try{
-                var test = new Test(subDir, linkerFile);
-                tests.add(test);
-            }catch (Test.TestParseException e){
-                printf("'%s' not loaded: ", subDir.getName(), e.getMessage());
+            if(suite.status == TestSuite.Status.NOT_CONFIGURED) {
+                return;
             }
-        }
+
+            this.suite = suite;
+
+            suite.run();
+        });
+
+        suiteThread.setName("Test Suite Thread");
+
+        suiteThread.start();
     }
 
-    private void setResetButton(boolean b) {
-        var value = b ? Value.TRUE : Value.FALSE;
-        var resetButton = componentDirectory.get(RESET_BUTTON_DIRECTORY);
-        var state = resetButton.state.getInstanceState(resetButton.component);
-
-        final var data = (InstanceDataSingleton) state.getData();
-        if (data == null) {
-            state.setData(new InstanceDataSingleton(value));
-        } else {
-            data.setValue(value);
-        }
-        state.getInstance().fireInvalidated();
-    }
-
-    private void printf(String running, Object... args) {
+    void printf(String running, Object... args) {
         outputArea.append(String.format(running, args));
     }
 
@@ -186,4 +141,21 @@ public class TestLncpuWindow{
             window.toFront();
     }
 
+    @Override
+    public void log(String format, Object... args) {
+        SwingUtilities.invokeLater(() -> printf(format, args));
+    }
+
+    @Override
+    public void onTestSuiteStatusChange(TestSuite.Status status) {
+        if(status == TestSuite.Status.EXECUTING) {
+            runButton.setEnabled(false);
+            stopButton.setEnabled(true);
+        }else if (status == TestSuite.Status.DONE) {
+            runButton.setEnabled(true);
+            stopButton.setEnabled(false);
+
+            suite.printSummary();
+        }
+    }
 }

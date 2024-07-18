@@ -1,6 +1,5 @@
 package com.cburch.logisim.gui.lncpu.test;
 
-import com.cburch.logisim.circuit.CircuitState;
 import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
 import com.cburch.logisim.gui.lncpu.util.WatchedSignal;
 
@@ -16,7 +15,7 @@ public class RegisterValuePassCondition implements IPassCondition{
     }
 
     @Override
-    public boolean test(ComponentDirectory directory, CircuitState state) {
+    public boolean test(ComponentDirectory directory) {
         return signal.getValue(directory).toLongValue() == value;
     }
 }

@@ -1,5 +1,6 @@
 package com.cburch.logisim.gui.lncpu.test;
 
+import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
 import com.cburch.logisim.gui.lncpu.util.WatchedSignal;
 
 import java.io.File;
@@ -14,7 +15,7 @@ public class Test {
 
     final String immediateName;
 
-    final String compiledCode;
+    final long[] compiledCode;
 
     final IPassCondition[] passConditions;
 
@@ -70,8 +71,8 @@ public class Test {
 
                     var address = Long.parseLong(addressStr, radix);
 
-                    if (address < 0x2000 || address >= 0x3fff){
-                        throw new TestParseException("invalid memory address: " + address);
+                    if ((address > 0xff && address < 0x2000) || address >= 0x3fff){
+                        throw new TestParseException("invalid memory address: 0x%04x".formatted(address));
                     }
 
                     radix = value.startsWith("0x") ? 16 : value.startsWith("0b") ? 2 : 10;
@@ -82,9 +83,14 @@ public class Test {
 
                     var expectedValue = Long.parseLong(value, 16);
 
-                    passConditions.add(new RAMValuePassCondition(address - 0x2000, expectedValue));
+                    passConditions.add(new RAMValuePassCondition(address <= 0xFF ? address : address - 0x2000, expectedValue));
                 } else {
-                    var watchedSignal = WatchedSignal.valueOf(signal.toUpperCase());
+                    WatchedSignal watchedSignal;
+                    try{
+                        watchedSignal = WatchedSignal.valueOf(signal.toUpperCase());
+                    }catch(IllegalArgumentException e){
+                        throw new TestParseException("invalid signal name (%s)".formatted(signal));
+                    }
 
                     var radix = value.startsWith("0x") ? 16 : value.startsWith("0b") ? 2 : 10;
 
@@ -106,7 +112,7 @@ public class Test {
         }
     }
 
-    private String parseCompiledCode(File testCode, File linkerFile) throws TestParseException {
+    private long[] parseCompiledCode(File testCode, File linkerFile) throws TestParseException {
         ensureTempDir();
 
         String[] command;
@@ -128,11 +134,23 @@ public class Test {
                 throw new TestParseException("compilation failed");
             }
 
-            return Files.readString(new File(tempDir, "a.out").toPath());
+            return Test.toLongArray(Files.readAllBytes(new File(tempDir, "a.out").toPath()));
+
 
         }catch(IOException | InterruptedException e) {
             throw new TestParseException("error while compiling code: " + e.getMessage());
         }
+    }
+
+    private static long[] toLongArray(byte[] bytes) {
+        long[] longs = new long[bytes.length];
+
+        for(int i = 0; i < bytes.length; i++) {
+            longs[i] = bytes[i] & 0xff;
+        }
+
+        return longs;
+
     }
 
     private void ensureTempDir() {
@@ -145,6 +163,15 @@ public class Test {
             // set to delete temporary directory and its contents
             tempDir.deleteOnExit();
         }
+    }
+
+    public boolean passed(ComponentDirectory componentDirectory) {
+        for (var passCondition : passConditions) {
+            if(!passCondition.test(componentDirectory)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static class TestParseException extends Exception {
