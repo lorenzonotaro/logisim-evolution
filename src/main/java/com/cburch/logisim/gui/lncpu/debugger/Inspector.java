@@ -15,13 +15,13 @@ import java.util.Map;
 
 public class Inspector extends JPanel {
     private final Project project;
-    private final Map<String, ComponentDirectory.Entry> componentsDirectory;
+    private final ComponentDirectory componentsDirectory;
 
     private final JTextField ra, rb, rc, rd;
     private final JTextField ss, sp, cspc, ir;
     private final FlagsInspector flags;
     private final StackInspector stack;
-    public Inspector(Project project, Map<String, ComponentDirectory.Entry> componentDirectory){
+    public Inspector(Project project, ComponentDirectory componentDirectory){
         this.project = project;
         this.componentsDirectory = componentDirectory;
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -123,20 +123,20 @@ public class Inspector extends JPanel {
         setValue(cspc, componentsDirectory, WatchedSignal.CS_PC);
 
         var flagsEntry = componentsDirectory.get(WatchedSignal.FLAGS.directory);
-        flags.update(WatchedSignal.FLAGS.valueGetter.apply(flagsEntry.component, flagsEntry.state).toLongValue());
+        flags.update(WatchedSignal.FLAGS.getValue(componentsDirectory).toLongValue());
 
         var ssEntry = componentsDirectory.get(WatchedSignal.SS.directory);
         var spEntry = componentsDirectory.get(WatchedSignal.SP.directory);
         var ramEntry = componentsDirectory.get(DebugLncpuWindow.RAM_DIRECTORY);
 
         var ramContents = ((RamState)ramEntry.state.getData(ramEntry.component)).getContents();
-        stack.update(ramContents, WatchedSignal.SS.valueGetter.apply(ssEntry.component, ssEntry.state).toLongValue(),
-                WatchedSignal.SP.valueGetter.apply(spEntry.component, spEntry.state).toLongValue());
+        stack.update(ramContents, WatchedSignal.SS.getValue(componentsDirectory).toLongValue(),
+                WatchedSignal.SP.getValue(componentsDirectory).toLongValue());
     }
 
-    private void setValue(JTextField textField, Map<String, ComponentDirectory.Entry> componentsDirectory, WatchedSignal signal) {
+    private void setValue(JTextField textField, ComponentDirectory componentsDirectory, WatchedSignal signal) {
         var entry = componentsDirectory.get(signal.directory);
-        long value = signal.valueGetter.apply(entry.component, entry.state).toLongValue();
+        long value = signal.getValue(componentsDirectory).toLongValue();
         String formatted = null;
         if(signal.displayBinary){
             formatted = String.format("%" + signal.bits + "s", Integer.toBinaryString((int) value)).replace(' ', '0');

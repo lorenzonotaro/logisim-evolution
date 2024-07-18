@@ -13,7 +13,9 @@ import java.util.Map;
 public class LncpuDebugger {
 
     private final Project project;
-    private final ComponentDirectory.Entry irEntry, cspcEntry;
+
+    private final ComponentDirectory directory;
+
     private Status status;
 
     private final List<DebuggerListener> debuggerListeners = new ArrayList<>();
@@ -28,14 +30,14 @@ public class LncpuDebugger {
     private Line currentLine;
     private Line stepOverTarget;
 
-    public LncpuDebugger(Project project, Map<String, ComponentDirectory.Entry> componentDirectory) {
+    public LncpuDebugger(Project project, ComponentDirectory componentDirectory) {
         this.project = project;
+
         setStatus(Status.UNCONFIGURED);
 
         this.codeMap = new HashMap<>();
 
-        this.irEntry = componentDirectory.get(WatchedSignal.IR.getDirectory());
-        this.cspcEntry = componentDirectory.get(WatchedSignal.CS_PC.getDirectory());
+        this.directory = componentDirectory;
     }
 
     public void init(String immediateCode){
@@ -119,8 +121,8 @@ public class LncpuDebugger {
 
     // We are syncronized if the CSPC contains an address that's +1 from a valid instruction, and IR contains the instruction code (fetch complete)
     private boolean checkSyncronized() {
-        final var cspc = WatchedSignal.CS_PC.valueGetter.apply(cspcEntry.component, cspcEntry.state).toLongValue();
-        final var ir = WatchedSignal.IR.valueGetter.apply(irEntry.component, irEntry.state).toLongValue();
+        final var cspc = WatchedSignal.CS_PC.getValue(directory).toLongValue();
+        final var ir = WatchedSignal.IR.getValue(directory).toLongValue();
 
         final var line = codeMap.get(cspc - 1);
 

@@ -34,7 +34,7 @@ public enum WatchedSignal {
     public final int bits;
 
     public final boolean displayBinary;
-    public final BiFunction<Component, CircuitState, Value> valueGetter;
+    private final BiFunction<Component, CircuitState, Value> valueGetter;
 
     WatchedSignal(String directory, String displayName, int bits, boolean displayBinary, BiFunction<Component, CircuitState, Value> valueGetter) {
         this.directory = directory;
@@ -50,5 +50,10 @@ public enum WatchedSignal {
 
     private static Value pinValueGetter(Component component, CircuitState state){
         return ((Pin) component.getFactory()).getValue(state.getInstanceState(component));
+    }
+
+    public Value getValue(ComponentDirectory directory){
+        var entry = directory.get(this.directory);
+        return valueGetter.apply(entry.component, entry.state);
     }
 }

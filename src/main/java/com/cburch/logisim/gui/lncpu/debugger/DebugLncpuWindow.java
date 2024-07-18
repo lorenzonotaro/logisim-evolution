@@ -29,13 +29,13 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     private final Inspector inspector;
     private File tempDir;
 
-    private final Map<String, ComponentDirectory.Entry> componentDirectory;
+    private final ComponentDirectory componentDirectory;
 
     private File lastProgramOpened, recentEeepromsDir;
 
     static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
 
-    static final String RAM_DIRECTORY = "RAM/RAM";
+    public static final String RAM_DIRECTORY = "RAM/RAM";
 
     static final String TEXT_STEP_OVER = "Step over (F8)";
     static final String TEXT_STEP_INTO = "Step into (F7)";

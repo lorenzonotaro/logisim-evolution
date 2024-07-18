@@ -22,14 +22,16 @@ public class ComponentDirectory extends HashMap<String, ComponentDirectory.Entry
         }
     }
 
-
-    public static Map<String, Entry> makeComponentDirectory(Project project){
-        var circuit = project.getCurrentCircuit();
-        var circuitState = project.getCircuitState();
-        return buildComponentDirectory(new HashMap<>(), circuit, circuitState, "");
+    private ComponentDirectory() {
     }
 
-    private static Map<String, Entry> buildComponentDirectory(Map<String, Entry> directory, Circuit circuit, CircuitState circuitState, String baseDir) {
+    public static ComponentDirectory makeComponentDirectory(Project project){
+        var circuit = project.getCurrentCircuit();
+        var circuitState = project.getCircuitState();
+        return buildComponentDirectory(new ComponentDirectory(), circuit, circuitState, "");
+    }
+
+    private static ComponentDirectory buildComponentDirectory(ComponentDirectory directory, Circuit circuit, CircuitState circuitState, String baseDir) {
         for(Component comp : circuit.getNonWires()){
             String label = comp.getAttributeSet().getValue(StdAttr.LABEL);
             String thisComp = (label == null || label.length() == 0) ? comp.getFactory().getDisplayName() : label;
