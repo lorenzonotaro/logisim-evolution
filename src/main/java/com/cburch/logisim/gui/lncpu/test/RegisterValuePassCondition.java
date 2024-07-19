@@ -8,6 +8,7 @@ public class RegisterValuePassCondition implements IPassCondition{
     private final WatchedSignal signal;
 
     private final long value;
+    private long actualValue;
 
     public RegisterValuePassCondition(WatchedSignal signal, long value) {
         this.signal = signal;
@@ -16,6 +17,16 @@ public class RegisterValuePassCondition implements IPassCondition{
 
     @Override
     public boolean test(ComponentDirectory directory) {
-        return signal.getValue(directory).toLongValue() == value;
+        return ((actualValue) = signal.getValue(directory).toLongValue()) == value;
+    }
+
+    @Override
+    public long getActualValue() {
+        return actualValue;
+    }
+
+    @Override
+    public String toString() {
+        return signal.displayName + " = " + value;
     }
 }

@@ -26,15 +26,15 @@ public class Test {
         File passValues = new File(folder, "pass.txt");
 
         if(!testCode.exists()) {
-            throw new TestParseException("test.lnasm not found");
+            throw new TestParseException("test.lnasm not found", ResultType.ERROR);
         }
 
         if(!passValues.exists()) {
-            throw new TestParseException("pass.txt not found");
+            throw new TestParseException("pass.txt not found", ResultType.ERROR);
         }
 
         if(!linkerFile.exists()) {
-            throw new TestParseException("linker.cfg not found");
+            throw new TestParseException("linker.cfg not found", ResultType.ERROR);
         }
 
         this.compiledCode = parseCompiledCode(testCode, linkerFile);
@@ -53,7 +53,7 @@ public class Test {
                 var match = line.matches(regex);
 
                 if(!match) {
-                    throw new TestParseException("invalid pass condition: " + line);
+                    throw new TestParseException("invalid pass condition: " + line, ResultType.PASS_CONDITIONS_FORMAT_ERROR);
                 }
 
                 var parts = line.split("=");
@@ -72,7 +72,7 @@ public class Test {
                     var address = Long.parseLong(addressStr, radix);
 
                     if ((address > 0xff && address < 0x2000) || address >= 0x3fff){
-                        throw new TestParseException("invalid memory address: 0x%04x".formatted(address));
+                        throw new TestParseException("invalid memory address: 0x%04x".formatted(address), ResultType.PASS_CONDITIONS_FORMAT_ERROR);
                     }
 
                     radix = value.startsWith("0x") ? 16 : value.startsWith("0b") ? 2 : 10;
@@ -89,7 +89,7 @@ public class Test {
                     try{
                         watchedSignal = WatchedSignal.valueOf(signal.toUpperCase());
                     }catch(IllegalArgumentException e){
-                        throw new TestParseException("invalid signal name (%s)".formatted(signal));
+                        throw new TestParseException("invalid signal name (%s)".formatted(signal), ResultType.PASS_CONDITIONS_FORMAT_ERROR);
                     }
 
                     var radix = value.startsWith("0x") ? 16 : value.startsWith("0b") ? 2 : 10;
@@ -106,9 +106,9 @@ public class Test {
 
             return passConditions.toArray(new IPassCondition[0]);
         } catch (IOException e) {
-            throw new TestParseException("unable to read pass conditions");
+            throw new TestParseException("unable to read pass conditions", ResultType.ERROR);
         } catch (IllegalArgumentException e) {
-            throw new TestParseException("invalid signal name: " + e.getMessage());
+            throw new TestParseException("invalid signal name: " + e.getMessage(), ResultType.PASS_CONDITIONS_FORMAT_ERROR);
         }
     }
 
@@ -125,20 +125,24 @@ public class Test {
 
 
         try{
+
+            // get output stderr and stdout from process
             var cmd = new ProcessBuilder(command);
             cmd.directory(tempDir);
             var process = cmd.start();
             process.waitFor();
 
+            String error = new String(process.getErrorStream().readAllBytes());
+
             if(process.exitValue() != 0) {
-                throw new TestParseException("compilation failed");
+                throw new TestParseException(error, ResultType.DOES_NOT_COMPILE);
             }
 
             return Test.toLongArray(Files.readAllBytes(new File(tempDir, "a.out").toPath()));
 
 
         }catch(IOException | InterruptedException e) {
-            throw new TestParseException("error while compiling code: " + e.getMessage());
+            throw new TestParseException("error while compiling code: " + e.getMessage(), ResultType.ERROR);
         }
     }
 
@@ -165,18 +169,61 @@ public class Test {
         }
     }
 
-    public boolean passed(ComponentDirectory componentDirectory) {
+    Test.Result passed(ComponentDirectory componentDirectory) {
+
+        boolean pass = true;
+
+        StringBuilder message = new StringBuilder("Failed conditions:\n");
+
         for (var passCondition : passConditions) {
             if(!passCondition.test(componentDirectory)) {
-                return false;
+                pass = false;
+                message.append(passCondition).append(" (actual: 0x%02x)\n".formatted(passCondition.getActualValue()));
             }
         }
-        return true;
+        return new Test.Result(immediateName, pass ? ResultType.PASSED : ResultType.FAILED, pass ? "" : message.toString());
     }
 
     static class TestParseException extends Exception {
-        public TestParseException(String message) {
+
+        public final ResultType status;
+
+        public TestParseException(String message, ResultType status) {
             super(message);
+            this.status = status;
         }
     }
+
+    record Result(String immediateName, ResultType type, String message) {
+        public Result(String immediateName, ResultType type) {
+            this(immediateName, type, null);
+        }
+
+    }
+
+    enum ResultType {
+        DOES_NOT_COMPILE("Does not compile"),
+        PASS_CONDITIONS_FORMAT_ERROR("Pass conditions format error"),
+        ERROR("Execution error"),
+
+        TIMEOUT("Timeout"),
+
+        PASSED("Passed"),
+
+        FAILED("Failed");
+
+        private final String message;
+
+        ResultType(String message){
+            this.message = message;
+        }
+
+
+        @Override
+        public String toString(){
+            return message;
+        }
+    }
+
+
 }

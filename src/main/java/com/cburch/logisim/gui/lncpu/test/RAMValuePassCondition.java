@@ -10,6 +10,8 @@ public class RAMValuePassCondition implements IPassCondition{
 
     private final long value;
 
+    private long actualValue;
+
     public RAMValuePassCondition(long address, long value) {
         this.address = address;
         this.value = value;
@@ -21,7 +23,17 @@ public class RAMValuePassCondition implements IPassCondition{
         var ramEntry = directory.get(DebugLncpuWindow.RAM_DIRECTORY);
         var ramContents = ((RamState)ramEntry.state.getData(ramEntry.component)).getContents();
 
-        return ramContents.get(address) == value;
+        return ((actualValue) = ramContents.get(address)) == value;
 
+    }
+
+    @Override
+    public long getActualValue() {
+        return actualValue;
+    }
+
+    @Override
+    public String toString() {
+        return "[0x%04x] = 0x%2x".formatted(address, value);
     }
 }

@@ -9,7 +9,7 @@ import com.cburch.logisim.proj.Project;
 import com.cburch.logisim.std.memory.MemState;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.*;
 
 class TestSuite implements Simulator.Listener{
 
@@ -33,9 +33,14 @@ class TestSuite implements Simulator.Listener{
 
     private final Object lock;
 
+    private Set<Test.Result> testResults;
+
     private volatile boolean stopRequested;
 
     TestSuite(File directory, ComponentDirectory componentDirectory, Project project, ILogger logger, ITestSuiteListener listener) {
+
+        testResults = new HashSet<>();
+
         this.componentDirectory = componentDirectory;
         this.project = project;
         this.logger = logger;
@@ -71,7 +76,8 @@ class TestSuite implements Simulator.Listener{
                 var test = new Test(subDir, linkerFile);
                 tests.add(test);
             }catch (Test.TestParseException e){
-                printf("'%s' not loaded: %s.\n", subDir.getName(), e.getMessage());
+                testResults.add(new Test.Result(subDir.getName(), e.status, e.getMessage()));
+                printf("'%s' not loaded: %s.\n", subDir.getName(), e.status == Test.ResultType.DOES_NOT_COMPILE ? "does not compile" : (e.status == Test.ResultType.PASS_CONDITIONS_FORMAT_ERROR ? "pass conditions format error" : "unknown error"));
                 notLoaded++;
             }
         }
@@ -132,13 +138,14 @@ class TestSuite implements Simulator.Listener{
                     while(status == Status.EXECUTING && !stopRequested) {
                         lock.wait(2000);
 
-                        if (System.currentTimeMillis() - start >= 2000) {
+                        if (System.currentTimeMillis() - start >= 2000 && status == Status.EXECUTING) {
                             timedOut = true;
                             break;
                         }
 
                     }
                 } catch (InterruptedException e) {
+                    testResults.add(new Test.Result(test.immediateName, Test.ResultType.ERROR, "Interrupted"));
                     printf("Interrupted.\n");
                     break;
                 }
@@ -149,15 +156,17 @@ class TestSuite implements Simulator.Listener{
                 this.timeout++;
                 printf("TIMEOUT\n");
             }else{
-                boolean passed = test.passed(componentDirectory);
+                var result = test.passed(componentDirectory);
 
-                if (passed) {
+                if (result.type() == Test.ResultType.PASSED) {
                     this.passed++;
                     printf("PASSED\n");
                 }else{
                     this.failed++;
                     printf("FAILED\n");
                 }
+
+                testResults.add(result);
             }
 
         }
@@ -231,6 +240,24 @@ class TestSuite implements Simulator.Listener{
             synchronized (lock) {
                 lock.notify();
             }
+        }
+    }
+
+    public void exportTestTXT(File file) {
+        if (!file.getName().endsWith(".txt")) {
+            file = new File(file.getAbsolutePath() + ".txt");
+        }
+
+        try (var writer = new java.io.PrintWriter(file)) {
+            for (var result : testResults) {
+                writer.println("======TEST======" + result.immediateName() + ": " + result.type());
+                if (result.message() != null) {
+                    writer.println("Message:");
+                    writer.println(result.message());
+                }
+            }
+        } catch (java.io.IOException e) {
+            printf("Error exporting test results: %s\n", e.getMessage());
         }
     }
 

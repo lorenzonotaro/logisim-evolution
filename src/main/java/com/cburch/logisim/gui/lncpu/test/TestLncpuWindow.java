@@ -1,31 +1,22 @@
 package com.cburch.logisim.gui.lncpu.test;
 
-import com.cburch.logisim.data.Value;
 import com.cburch.logisim.gui.generic.LFrame;
-import com.cburch.logisim.gui.hex.HexFile;
 import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
-import com.cburch.logisim.gui.lncpu.util.WatchedSignal;
-import com.cburch.logisim.instance.InstanceDataSingleton;
 import com.cburch.logisim.proj.Project;
-import com.cburch.logisim.std.memory.MemState;
 import com.cburch.logisim.util.JFileChoosers;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 public class TestLncpuWindow implements ILogger, ITestSuiteListener {
 
     private final Project project;
-    private final JButton runButton, stopButton;
+
+    private final JButton runButton, stopButton, exportTestData;
 
     private final ComponentDirectory componentDirectory;
 
@@ -51,15 +42,43 @@ public class TestLncpuWindow implements ILogger, ITestSuiteListener {
 
         JPanel contentPane = new JPanel(new BorderLayout());
 
-        JPanel northPane = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel northLeftPane = new JPanel(new FlowLayout(FlowLayout.LEFT));
         this.runButton = new JButton("Run tests...");
         this.runButton.addActionListener(this::run);
         this.stopButton = new JButton("Stop");
         this.stopButton.addActionListener(this::stop);
         this.stopButton.setEnabled(false);
 
-        northPane.add(runButton);
-        northPane.add(stopButton);
+        northLeftPane.add(runButton);
+        northLeftPane.add(stopButton);
+
+
+        JPanel northPane = new JPanel(new BorderLayout());
+
+
+        JPanel northRightPane = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        this.exportTestData = new JButton("Export test data...");
+        this.exportTestData.setEnabled(false);
+        this.exportTestData.addActionListener(e -> {
+            if (suite != null) {
+                var fc = JFileChoosers.createAt(recent);
+
+                fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                fc.setDialogTitle("Select file to save test data");
+                fc.setApproveButtonText("Save");
+                fc.setFileFilter(new FileNameExtensionFilter("TXT File", "txt"));
+
+                if (fc.showOpenDialog(window) == JFileChooser.APPROVE_OPTION) {
+                    suite.exportTestTXT(fc.getSelectedFile());
+                }
+            }
+        });
+
+        northRightPane.add(exportTestData);
+
+        northPane.add(northLeftPane, BorderLayout.WEST);
+        northPane.add(northRightPane, BorderLayout.EAST);
         contentPane.add(northPane, BorderLayout.NORTH);
 
         this.outputArea = new JTextArea();
@@ -151,9 +170,11 @@ public class TestLncpuWindow implements ILogger, ITestSuiteListener {
         if(status == TestSuite.Status.EXECUTING) {
             runButton.setEnabled(false);
             stopButton.setEnabled(true);
+            exportTestData.setEnabled(false);
         }else if (status == TestSuite.Status.DONE) {
             runButton.setEnabled(true);
             stopButton.setEnabled(false);
+            exportTestData.setEnabled(true);
 
             suite.printSummary();
         }
