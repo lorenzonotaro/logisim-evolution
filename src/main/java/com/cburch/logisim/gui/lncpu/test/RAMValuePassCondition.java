@@ -34,6 +34,6 @@ public class RAMValuePassCondition implements IPassCondition{
 
     @Override
     public String toString() {
-        return "[0x%04x] = 0x%2x".formatted(address, value);
+        return "[0x%04x] = 0x%02x".formatted(address, value);
     }
 }
