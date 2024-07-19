@@ -27,6 +27,6 @@ public class RegisterValuePassCondition implements IPassCondition{
 
     @Override
     public String toString() {
-        return signal.displayName + " = " + value;
+        return "%s = 0x%02x".formatted(signal.displayName, value);
     }
 }
