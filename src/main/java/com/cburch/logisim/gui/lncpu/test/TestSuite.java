@@ -249,7 +249,8 @@ class TestSuite implements Simulator.Listener{
         }
 
         try (var writer = new java.io.PrintWriter(file)) {
-            for (var result : testResults) {
+            var results = testResults.stream().sorted(Comparator.comparingInt(o -> o.type().ordinal())).toList();
+            for (var result : results) {
                 writer.println("======TEST======" + result.immediateName() + ": " + result.type());
                 if (result.message() != null) {
                     writer.println("Message:");
