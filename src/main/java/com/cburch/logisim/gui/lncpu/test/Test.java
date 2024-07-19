@@ -71,7 +71,7 @@ public class Test {
 
                     var address = Long.parseLong(addressStr, radix);
 
-                    if ((address > 0xff && address < 0x2000) || address >= 0x3fff){
+                    if ((address > 0xff && address < 0x2000) || address > 0x3fff){
                         throw new TestParseException("invalid memory address: 0x%04x".formatted(address), ResultType.PASS_CONDITIONS_FORMAT_ERROR);
                     }
 
