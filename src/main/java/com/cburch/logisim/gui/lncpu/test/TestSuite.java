@@ -154,6 +154,7 @@ class TestSuite implements Simulator.Listener{
             simulator.setAutoTicking(false);
             if (timedOut) {
                 this.timeout++;
+                this.testResults.add(new Test.Result(test.immediateName, Test.ResultType.TIMEOUT, "Timeout"));
                 printf("TIMEOUT\n");
             }else{
                 var result = test.passed(componentDirectory);
