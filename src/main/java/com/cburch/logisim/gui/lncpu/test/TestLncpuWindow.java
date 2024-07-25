@@ -18,23 +18,18 @@ public class TestLncpuWindow implements ILogger, ITestSuiteListener {
 
     private final JButton runButton, stopButton, exportTestData;
 
-    private final ComponentDirectory componentDirectory;
-
     private JTextArea outputArea;
 
     private LFrame window;
 
     private File recent;
 
-
-
-    private Object lock;
-
     private TestSuite suite;
 
     public TestLncpuWindow(Project project) {
         this.project = project;
-        this.componentDirectory = ComponentDirectory.makeComponentDirectory(project);
+
+        ComponentDirectory.init(project);
 
         window = new LFrame.SubWindow(null);
         window.setTitle("Test Lncpu");
@@ -122,7 +117,7 @@ public class TestLncpuWindow implements ILogger, ITestSuiteListener {
         }
 
         var suiteThread = new Thread(() -> {
-            TestSuite suite = new TestSuite(recent, componentDirectory, project, this, this);
+            TestSuite suite = new TestSuite(recent, project, this, this);
 
             if(suite.status == TestSuite.Status.NOT_CONFIGURED) {
                 return;

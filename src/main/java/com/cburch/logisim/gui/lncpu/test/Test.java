@@ -169,14 +169,14 @@ public class Test {
         }
     }
 
-    Test.Result passed(ComponentDirectory componentDirectory) {
+    Test.Result passed() {
 
         boolean pass = true;
 
         StringBuilder message = new StringBuilder("Failed conditions:\n");
 
         for (var passCondition : passConditions) {
-            if(!passCondition.test(componentDirectory)) {
+            if(!passCondition.test()) {
                 pass = false;
                 message.append(passCondition).append(" (actual: 0x%02x)\n".formatted(passCondition.getActualValue()));
             }

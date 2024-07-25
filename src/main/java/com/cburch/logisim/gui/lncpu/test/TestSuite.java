@@ -17,7 +17,6 @@ class TestSuite implements Simulator.Listener{
 
     static final String RESET_BUTTON_DIRECTORY = "RESET_BTN";
 
-    private final ComponentDirectory componentDirectory;
     private final Project project;
     private final ILogger logger;
 
@@ -27,8 +26,6 @@ class TestSuite implements Simulator.Listener{
 
     private int notLoaded, passed, failed, timeout;
 
-    private final ComponentDirectory.Entry notHltEntry, romEntry;
-
     volatile Status status;
 
     private final Object lock;
@@ -37,17 +34,14 @@ class TestSuite implements Simulator.Listener{
 
     private volatile boolean stopRequested;
 
-    TestSuite(File directory, ComponentDirectory componentDirectory, Project project, ILogger logger, ITestSuiteListener listener) {
+    TestSuite(File directory, Project project, ILogger logger, ITestSuiteListener listener) {
 
         testResults = new HashSet<>();
 
-        this.componentDirectory = componentDirectory;
         this.project = project;
         this.logger = logger;
         this.listener = listener;
         this.status = Status.NOT_CONFIGURED;
-        this.notHltEntry = componentDirectory.get(WatchedSignal.NOT_HLT.directory);
-        this.romEntry = componentDirectory.get(ROM_DIRECTORY);
         this.lock = new Object();
 
         printf("Parsing tests...\n");
@@ -112,7 +106,10 @@ class TestSuite implements Simulator.Listener{
             // reset simulator
             simulator.reset();
 
+            sleep(200); //TODO: find another way of ensuring the CircuitState is updated other than waiting...
+
             // load compiled code into ROM
+            var romEntry = ComponentDirectory.getEntry(ROM_DIRECTORY);
             var memState = (MemState) romEntry.state.getData(romEntry.component);
 
             memState.getContents().clear();
@@ -157,7 +154,7 @@ class TestSuite implements Simulator.Listener{
                 this.testResults.add(new Test.Result(test.immediateName, Test.ResultType.TIMEOUT, "Timeout"));
                 printf("TIMEOUT\n");
             }else{
-                var result = test.passed(componentDirectory);
+                var result = test.passed();
 
                 if (result.type() == Test.ResultType.PASSED) {
                     this.passed++;
@@ -210,7 +207,7 @@ class TestSuite implements Simulator.Listener{
 
     private void setResetButton(boolean b) {
         var value = b ? Value.TRUE : Value.FALSE;
-        var resetButton = componentDirectory.get(RESET_BUTTON_DIRECTORY);
+        var resetButton = ComponentDirectory.getEntry(RESET_BUTTON_DIRECTORY);
         var state = resetButton.state.getInstanceState(resetButton.component);
 
         final var data = (InstanceDataSingleton) state.getData();
@@ -234,7 +231,7 @@ class TestSuite implements Simulator.Listener{
 
     @Override
     public void propagationCompleted(Simulator.Event e) {
-        if (WatchedSignal.NOT_HLT.getValue(componentDirectory).toLongValue() == 0){
+        if (WatchedSignal.NOT_HLT.getValue().toLongValue() == 0){
             setStatus(Status.READY);
 
             // notify waiting thread

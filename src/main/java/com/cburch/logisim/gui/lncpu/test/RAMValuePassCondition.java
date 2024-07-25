@@ -19,8 +19,8 @@ public class RAMValuePassCondition implements IPassCondition{
     }
 
     @Override
-    public boolean test(ComponentDirectory directory) {
-        var ramEntry = directory.get(DebugLncpuWindow.RAM_DIRECTORY);
+    public boolean test() {
+        var ramEntry = ComponentDirectory.getEntry(DebugLncpuWindow.RAM_DIRECTORY);
         var ramContents = ((RamState)ramEntry.state.getData(ramEntry.component)).getContents();
 
         return ((actualValue) = ramContents.get(address)) == value;

@@ -52,8 +52,8 @@ public enum WatchedSignal {
         return ((Pin) component.getFactory()).getValue(state.getInstanceState(component));
     }
 
-    public Value getValue(ComponentDirectory directory){
-        var entry = directory.get(this.directory);
+    public Value getValue(){
+        var entry = ComponentDirectory.getEntry(directory);
         return valueGetter.apply(entry.component, entry.state);
     }
 }

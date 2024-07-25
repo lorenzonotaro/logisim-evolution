@@ -29,8 +29,6 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     private final Inspector inspector;
     private File tempDir;
 
-    private final ComponentDirectory componentDirectory;
-
     private File lastProgramOpened, recentEeepromsDir;
 
     static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
@@ -47,11 +45,12 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
     public DebugLncpuWindow(Project project) {
 
-        componentDirectory = ComponentDirectory.makeComponentDirectory(project);
+        ComponentDirectory.init(project);
 
         project.getSimulator().addSimulatorListener(DebugLncpuWindow.this);
 
-        this.debugger = new LncpuDebugger(project, componentDirectory);
+
+        this.debugger = new LncpuDebugger(project);
         this.debugger.addDebuggerListener(this);
 
         this.project = project;
@@ -93,7 +92,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
         scroller.setRowHeaderView(new DebuggerLineNumber(codeArea, debugger));
         main.add(scroller, BorderLayout.CENTER);
 
-        inspector = new Inspector(project, componentDirectory);
+        inspector = new Inspector(project);
         main.add(inspector, BorderLayout.EAST);
 
         // set buttons to an unconfigured state
@@ -157,7 +156,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             }
 
             for (var file : files) {
-                var eeprom = componentDirectory.get("ControlUnit/EEPROM" + file.getName().charAt(6));
+                var eeprom = ComponentDirectory.getEntry("ControlUnit/EEPROM" + file.getName().charAt(6));
                 if (eeprom == null) {
                     JOptionPane.showMessageDialog(this.window, "EEPROM not found in the circuit", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
@@ -286,7 +285,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             }
 
             // load the program into the ROM
-            var rom = componentDirectory.get(ROM_DIRECTORY);
+            var rom = ComponentDirectory.getEntry(ROM_DIRECTORY);
             if(rom == null) {
                 JOptionPane.showMessageDialog(this.window, "ROM not found in the circuit", "Error", JOptionPane.ERROR_MESSAGE);
                 return;

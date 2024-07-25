@@ -11,19 +11,15 @@ import com.cburch.logisim.std.memory.RamState;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.util.Map;
 
 public class Inspector extends JPanel {
     private final Project project;
-    private final ComponentDirectory componentsDirectory;
-
     private final JTextField ra, rb, rc, rd;
     private final JTextField ss, sp, cspc, ir;
     private final FlagsInspector flags;
     private final StackInspector stack;
-    public Inspector(Project project, ComponentDirectory componentDirectory){
+    public Inspector(Project project){
         this.project = project;
-        this.componentsDirectory = componentDirectory;
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
         var registersPanel = new JPanel(new GridLayout(2,2));
@@ -50,8 +46,8 @@ public class Inspector extends JPanel {
         JPanel editMemoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton inspectRAM = new JButton("Inspect RAM...");
         inspectRAM.addActionListener(e -> {
-            var ramEntry = componentsDirectory.get(DebugLncpuWindow.RAM_DIRECTORY);
-            var ramFactory = (Mem) componentsDirectory.get(DebugLncpuWindow.RAM_DIRECTORY).component.getFactory();
+            var ramEntry = ComponentDirectory.getEntry(DebugLncpuWindow.RAM_DIRECTORY);
+            var ramFactory = (Mem) ComponentDirectory.getEntry(DebugLncpuWindow.RAM_DIRECTORY).component.getFactory();
             HexFrame frame = ramFactory.getHexFrame(project, ramEntry.state.getInstanceState(ramEntry.component).getInstance(), ramEntry.state);
             frame.setVisible(true);
             frame.toFront();
@@ -60,8 +56,8 @@ public class Inspector extends JPanel {
 
         JButton inspectROM = new JButton("Inspect ROM...");
         inspectROM.addActionListener(e -> {
-            var romEntry = componentsDirectory.get(DebugLncpuWindow.ROM_DIRECTORY);
-            var romFactory = (Mem) componentsDirectory.get(DebugLncpuWindow.ROM_DIRECTORY).component.getFactory();
+            var romEntry = ComponentDirectory.getEntry(DebugLncpuWindow.ROM_DIRECTORY);
+            var romFactory = (Mem) ComponentDirectory.getEntry(DebugLncpuWindow.ROM_DIRECTORY).component.getFactory();
             HexFrame frame = romFactory.getHexFrame(project, romEntry.state.getInstanceState(romEntry.component).getInstance(), romEntry.state);
             frame.setVisible(true);
             frame.toFront();
@@ -112,31 +108,31 @@ public class Inspector extends JPanel {
 
 
     void update(){
-        setValue(ra, componentsDirectory, WatchedSignal.RA);
-        setValue(rb, componentsDirectory, WatchedSignal.RB);
-        setValue(rc, componentsDirectory, WatchedSignal.RC);
-        setValue(rd, componentsDirectory, WatchedSignal.RD);
+        setValue(ra, WatchedSignal.RA);
+        setValue(rb, WatchedSignal.RB);
+        setValue(rc, WatchedSignal.RC);
+        setValue(rd, WatchedSignal.RD);
 
-        setValue(ss, componentsDirectory, WatchedSignal.SS);
-        setValue(sp, componentsDirectory, WatchedSignal.SP);
-        setValue(ir, componentsDirectory, WatchedSignal.IR);
-        setValue(cspc, componentsDirectory, WatchedSignal.CS_PC);
+        setValue(ss, WatchedSignal.SS);
+        setValue(sp, WatchedSignal.SP);
+        setValue(ir, WatchedSignal.IR);
+        setValue(cspc, WatchedSignal.CS_PC);
 
-        var flagsEntry = componentsDirectory.get(WatchedSignal.FLAGS.directory);
-        flags.update(WatchedSignal.FLAGS.getValue(componentsDirectory).toLongValue());
+        var flagsEntry = ComponentDirectory.getEntry(WatchedSignal.FLAGS.directory);
+        flags.update(WatchedSignal.FLAGS.getValue().toLongValue());
 
-        var ssEntry = componentsDirectory.get(WatchedSignal.SS.directory);
-        var spEntry = componentsDirectory.get(WatchedSignal.SP.directory);
-        var ramEntry = componentsDirectory.get(DebugLncpuWindow.RAM_DIRECTORY);
+        var ssEntry = ComponentDirectory.getEntry(WatchedSignal.SS.directory);
+        var spEntry = ComponentDirectory.getEntry(WatchedSignal.SP.directory);
+        var ramEntry = ComponentDirectory.getEntry(DebugLncpuWindow.RAM_DIRECTORY);
 
         var ramContents = ((RamState)ramEntry.state.getData(ramEntry.component)).getContents();
-        stack.update(ramContents, WatchedSignal.SS.getValue(componentsDirectory).toLongValue(),
-                WatchedSignal.SP.getValue(componentsDirectory).toLongValue());
+        stack.update(ramContents, WatchedSignal.SS.getValue().toLongValue(),
+                WatchedSignal.SP.getValue().toLongValue());
     }
 
-    private void setValue(JTextField textField, ComponentDirectory componentsDirectory, WatchedSignal signal) {
-        var entry = componentsDirectory.get(signal.directory);
-        long value = signal.getValue(componentsDirectory).toLongValue();
+    private void setValue(JTextField textField, WatchedSignal signal) {
+        var entry = ComponentDirectory.getEntry(signal.directory);
+        long value = signal.getValue().toLongValue();
         String formatted = null;
         if(signal.displayBinary){
             formatted = String.format("%" + signal.bits + "s", Integer.toBinaryString((int) value)).replace(' ', '0');
