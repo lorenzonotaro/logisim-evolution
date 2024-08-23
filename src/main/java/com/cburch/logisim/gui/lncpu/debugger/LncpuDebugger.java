@@ -1,14 +1,19 @@
 package com.cburch.logisim.gui.lncpu.debugger;
 
 import com.cburch.logisim.circuit.Simulator;
+import com.cburch.logisim.data.Value;
 import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
+import com.cburch.logisim.gui.lncpu.util.LncpuUtils;
 import com.cburch.logisim.gui.lncpu.util.WatchedSignal;
+import com.cburch.logisim.instance.InstanceDataSingleton;
 import com.cburch.logisim.proj.Project;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.cburch.logisim.gui.lncpu.util.LncpuUtils.sleep;
 
 public class LncpuDebugger {
 
@@ -41,13 +46,26 @@ public class LncpuDebugger {
         this.immediateCode = immediateCode;
         lines = parseLines(immediateCode);
 
+        reset();
+    }
+
+    public void reset() {
         project.getSimulator().setAutoPropagation(true);
         project.getSimulator().setAutoTicking(false);
         project.getSimulator().setTickFrequency(2048);
         project.getSimulator().reset();
 
-        setStatus(Status.PAUSED);
+        sleep(200); // TODO: find a better way to wait for the simulator to reset
+
+        LncpuUtils.setResetButton(true);
+
+        sleep(50);
+
+        LncpuUtils.setResetButton(false);
+
+        setStatus(Status.READY);
     }
+
 
     public Status getStatus() {
         return status;
@@ -86,6 +104,8 @@ public class LncpuDebugger {
     }
 
     public Line getLine(int lineNumber){
+        if(lineNumber > lines.length)
+            return null;
         return lines[lineNumber - 1];
     }
 
@@ -123,13 +143,12 @@ public class LncpuDebugger {
 
         final var line = codeMap.get(cspc - 1);
 
-        if (line == null) {
-            return false;
+        if (line != null && line.getInstructionCode() == ir){
+            this.currentLine = line;
+            return true;
         }
 
-        this.currentLine = line;
-
-        return line.getInstructionCode() == ir;
+        return false;
     }
 
     public void stepInto(){

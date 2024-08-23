@@ -15,6 +15,8 @@ import java.util.Map;
 
 public class ComponentDirectory extends HashMap<String, ComponentDirectory.Entry> {
 
+    public static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
+    public static final String RESET_BUTTON_DIRECTORY = "RESET_BTN";
     private static ComponentDirectory instance;
 
     private final Project project;

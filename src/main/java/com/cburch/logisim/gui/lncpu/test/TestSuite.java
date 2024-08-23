@@ -3,6 +3,7 @@ package com.cburch.logisim.gui.lncpu.test;
 import com.cburch.logisim.circuit.Simulator;
 import com.cburch.logisim.data.Value;
 import com.cburch.logisim.gui.lncpu.util.ComponentDirectory;
+import com.cburch.logisim.gui.lncpu.util.LncpuUtils;
 import com.cburch.logisim.gui.lncpu.util.WatchedSignal;
 import com.cburch.logisim.instance.InstanceDataSingleton;
 import com.cburch.logisim.proj.Project;
@@ -12,10 +13,6 @@ import java.io.File;
 import java.util.*;
 
 class TestSuite implements Simulator.Listener{
-
-    static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
-
-    static final String RESET_BUTTON_DIRECTORY = "RESET_BTN";
 
     private final Project project;
     private final ILogger logger;
@@ -106,20 +103,20 @@ class TestSuite implements Simulator.Listener{
             // reset simulator
             simulator.reset();
 
-            sleep(200); //TODO: find another way of ensuring the CircuitState is updated other than waiting...
+            LncpuUtils.sleep(200); //TODO: find another way of ensuring the CircuitState is updated other than waiting...
 
             // load compiled code into ROM
-            var romEntry = ComponentDirectory.getEntry(ROM_DIRECTORY);
+            var romEntry = ComponentDirectory.getEntry(ComponentDirectory.ROM_DIRECTORY);
             var memState = (MemState) romEntry.state.getData(romEntry.component);
 
             memState.getContents().clear();
             memState.getContents().set(0, test.compiledCode);
 
-            setResetButton(true);
+            LncpuUtils.setResetButton(true);
 
-            sleep(50);
+            LncpuUtils.sleep(50);
 
-            setResetButton(false);
+            LncpuUtils.setResetButton(false);
 
             simulator.setAutoTicking(true);
 
@@ -177,13 +174,6 @@ class TestSuite implements Simulator.Listener{
         setStatus(Status.DONE);
     }
 
-    private static void sleep(long ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException ignored) {
-        }
-    }
-
     void printSummary() {
         printf("TOTAL: %d\n", tests.length + notLoaded);
         printf("Not loaded: %d\n", notLoaded);
@@ -205,19 +195,6 @@ class TestSuite implements Simulator.Listener{
         this.stopRequested = true;
     }
 
-    private void setResetButton(boolean b) {
-        var value = b ? Value.TRUE : Value.FALSE;
-        var resetButton = ComponentDirectory.getEntry(RESET_BUTTON_DIRECTORY);
-        var state = resetButton.state.getInstanceState(resetButton.component);
-
-        final var data = (InstanceDataSingleton) state.getData();
-        if (data == null) {
-            state.setData(new InstanceDataSingleton(value));
-        } else {
-            data.setValue(value);
-        }
-        state.getInstance().fireInvalidated();
-    }
 
     @Override
     public void simulatorReset(Simulator.Event e) {

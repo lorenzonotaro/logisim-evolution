@@ -21,7 +21,7 @@ import java.util.Map;
 
 public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
-    private final JButton stepOverBtn, stepIntoBtn, pauseResumeBtn;
+    private final JButton stepOverBtn, stepIntoBtn, pauseResumeBtn, resetBtn;
 
     private final Project project;
     private final LFrame window;
@@ -39,6 +39,8 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     static final String TEXT_STEP_INTO = "Step into (F7)";
     static final String TEXT_PAUSE = "Pause (F5)";
     static final String TEXT_RESUME = "Resume (F5)";
+    static final String TEXT_START = "Start (F5)";
+    static final String TEXT_RESET = "Reset (F12)";
 
 
     private LncpuDebugger debugger;
@@ -69,7 +71,8 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
         final var debugControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         debugControlPanel.add(stepOverBtn = new JButton(TEXT_STEP_OVER));
         debugControlPanel.add(stepIntoBtn = new JButton(TEXT_STEP_INTO));
-        debugControlPanel.add(pauseResumeBtn = new JButton(TEXT_PAUSE));
+        debugControlPanel.add(pauseResumeBtn = new JButton(TEXT_START));
+        debugControlPanel.add(resetBtn = new JButton(TEXT_RESET));
         north.add(debugControlPanel, BorderLayout.EAST);
         final var openFile = new JButton("Load program...");
         final var loadCtrEeproms = new JButton("Load CU EEPROMs...");
@@ -103,6 +106,8 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
         stepIntoBtn.addActionListener(this::stepIntoPressed);
 
         pauseResumeBtn.addActionListener(this::pauseResumePressed);
+
+        resetBtn.addActionListener(e -> debugger.reset());
 
 
         window.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
@@ -175,7 +180,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     }
 
     private void pauseResumePressed(ActionEvent e) {
-        if(debugger.getStatus() == Status.PAUSED){
+        if(debugger.getStatus() == Status.PAUSED || debugger.getStatus() == Status.READY){
             debugger.run();
             codeArea.setHighlightedLineNumber(-1);
         } else {
@@ -367,7 +372,12 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             case PAUSED:
                 pauseResumeBtn.setText(TEXT_RESUME);
                 break;
+            case READY:
+                pauseResumeBtn.setText(TEXT_START);
+                break;
         }
+
+        inspector.update();
     }
 
     @Override

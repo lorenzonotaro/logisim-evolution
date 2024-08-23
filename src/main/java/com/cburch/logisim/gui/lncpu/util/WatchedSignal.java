@@ -18,7 +18,7 @@ public enum WatchedSignal {
 
     CS_PC("CSPC/CS_PC", "CS:PC", 16, false, WatchedSignal::pinValueGetter),
 
-    SS("SS", "SS", 8, false, WatchedSignal::registerValueGetter),
+    SS("SS/ASYNC_OUT", "SS", 8, false, WatchedSignal::pinValueGetter),
     SP("SP/ASYNC_OUT", "SP", 8, false, WatchedSignal::pinValueGetter),
 
     IR("ControlUnit/IR", "IR", 8, false, WatchedSignal::registerValueGetter),
