@@ -15,7 +15,7 @@ import java.awt.*;
 public class Inspector extends JPanel {
     private final Project project;
     private final JTextField ra, rb, rc, rd;
-    private final JTextField ss, sp, cspc, ir;
+    private final JTextField ss, sp, cspc, ir, ds;
     private final FlagsInspector flags;
     private final StackInspector stack;
     public Inspector(Project project){
@@ -29,12 +29,13 @@ public class Inspector extends JPanel {
         registersPanel.add(labelPanel(rc = createTextField(), "RC"));
         registersPanel.add(labelPanel(rd = createTextField(), "RD"));
 
-        var specialRegistersPanel = new JPanel(new GridLayout(2,2));
+        var specialRegistersPanel = new JPanel(new GridLayout(3,2));
         specialRegistersPanel.setBorder(new TitledBorder("Special registers"));
         specialRegistersPanel.add(labelPanel(ss = createTextField(), "SS"));
         specialRegistersPanel.add(labelPanel(sp = createTextField(), "SP"));
-        specialRegistersPanel.add(labelPanel(cspc = createTextField(), "CS:PC"));
         specialRegistersPanel.add(labelPanel(ir = createTextField(), "IR"));
+        specialRegistersPanel.add(labelPanel(ds = createTextField(), "DS"));
+        specialRegistersPanel.add(labelPanel(cspc = createTextField(), "CS:PC"));
 
         this.add(wrap(registersPanel));
         this.add(wrap(specialRegistersPanel));
@@ -117,6 +118,7 @@ public class Inspector extends JPanel {
         setValue(sp, WatchedSignal.SP);
         setValue(ir, WatchedSignal.IR);
         setValue(cspc, WatchedSignal.CS_PC);
+        setValue(ds, WatchedSignal.DS);
 
         var flagsEntry = ComponentDirectory.getEntry(WatchedSignal.FLAGS.directory);
         flags.update(WatchedSignal.FLAGS.getValue().toLongValue());

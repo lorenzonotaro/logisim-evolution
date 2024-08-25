@@ -20,6 +20,7 @@ public enum WatchedSignal {
 
     SS("SS/ASYNC_OUT", "SS", 8, false, WatchedSignal::pinValueGetter),
     SP("SP/ASYNC_OUT", "SP", 8, false, WatchedSignal::pinValueGetter),
+    DS("DS/ASYNC_OUT", "DS", 8, false, WatchedSignal::pinValueGetter),
 
     IR("ControlUnit/IR", "IR", 8, false, WatchedSignal::registerValueGetter),
 
