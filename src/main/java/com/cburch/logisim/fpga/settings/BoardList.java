@@ -73,10 +73,9 @@ public class BoardList {
     }
     final var entries = zf.entries();
     while (entries.hasMoreElements()) {
-      final var ze = entries.nextElement();
-      final var fileName = ze.getName();
-      final var accept = pattern.matcher(fileName).matches() && fileName.contains(match);
-      if (accept) {
+      final var fileName = entries.nextElement().getName();
+      if ((new File(dir, fileName)).toPath().normalize().startsWith(dir.toPath().normalize())
+          && pattern.matcher(fileName).matches() && fileName.contains(match)) {
         ret.add("url:" + fileName);
       }
     }

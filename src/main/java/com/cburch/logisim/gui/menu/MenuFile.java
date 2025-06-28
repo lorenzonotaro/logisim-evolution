@@ -13,6 +13,8 @@ import static com.cburch.logisim.gui.Strings.S;
 
 import com.cburch.logisim.gui.generic.OptionPane;
 import com.cburch.logisim.gui.prefs.PreferencesFrame;
+import com.cburch.logisim.prefs.AppPreferences;
+import com.cburch.logisim.prefs.PrefMonitorKeyStroke;
 import com.cburch.logisim.proj.ProjectActions;
 import com.cburch.logisim.proj.Projects;
 import com.cburch.logisim.util.MacCompatibility;
@@ -34,6 +36,7 @@ class MenuFile extends Menu implements ActionListener {
   private final JMenuItem save = new JMenuItem();
   private final JMenuItem saveAs = new JMenuItem();
   private final JMenuItem exportProj = new JMenuItem();
+  private final JMenuItem extractRunProj = new JMenuItem();
   private final MenuItemImpl print = new MenuItemImpl(this, LogisimMenuBar.PRINT);
   private final MenuItemImpl exportImage = new MenuItemImpl(this, LogisimMenuBar.EXPORT_IMAGE);
   private final JMenuItem prefs = new JMenuItem();
@@ -53,10 +56,15 @@ class MenuFile extends Menu implements ActionListener {
     save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, menuMask));
     saveAs.setAccelerator(
         KeyStroke.getKeyStroke(KeyEvent.VK_S, menuMask | InputEvent.SHIFT_DOWN_MASK));
-    exportProj.setAccelerator(
-        KeyStroke.getKeyStroke(KeyEvent.VK_E, menuMask | InputEvent.SHIFT_DOWN_MASK));
-    print.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, menuMask));
     quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, menuMask));
+
+    exportProj.setAccelerator(((PrefMonitorKeyStroke)
+        AppPreferences.HOTKEY_FILE_EXPORT).getWithMask(0));
+    print.setAccelerator(((PrefMonitorKeyStroke)
+        AppPreferences.HOTKEY_FILE_PRINT).getWithMask(0));
+
+    /* add myself to hotkey sync */
+    AppPreferences.gui_sync_objects.add(this);
 
     add(newi);
     add(merge);
@@ -66,6 +74,8 @@ class MenuFile extends Menu implements ActionListener {
     add(close);
     add(save);
     add(saveAs);
+    addSeparator();
+    add(extractRunProj);
     add(exportProj);
     addSeparator();
     add(exportImage);
@@ -88,17 +98,26 @@ class MenuFile extends Menu implements ActionListener {
       save.setEnabled(false);
       saveAs.setEnabled(false);
       exportProj.setEnabled(false);
+      extractRunProj.setEnabled(false);
     } else {
       merge.addActionListener(this);
       close.addActionListener(this);
       save.addActionListener(this);
       saveAs.addActionListener(this);
       exportProj.addActionListener(this);
+      extractRunProj.addActionListener(this);
     }
     menubar.registerItem(LogisimMenuBar.EXPORT_IMAGE, exportImage);
     menubar.registerItem(LogisimMenuBar.PRINT, print);
     prefs.addActionListener(this);
     quit.addActionListener(this);
+  }
+
+  public void hotkeyUpdate() {
+    exportProj.setAccelerator(((PrefMonitorKeyStroke)
+        AppPreferences.HOTKEY_FILE_EXPORT).getWithMask(0));
+    print.setAccelerator(((PrefMonitorKeyStroke)
+        AppPreferences.HOTKEY_FILE_PRINT).getWithMask(0));
   }
 
   @Override
@@ -169,12 +188,14 @@ class MenuFile extends Menu implements ActionListener {
         ProjectActions.doSaveAs(proj);
       } else if (src == exportProj) {
         ProjectActions.doExportProject(proj);
+      } else if (src == extractRunProj) {
+        ProjectActions.doExtractAndRunProject(proj);
       }
     }
   }
 
   @Override
-  void computeEnabled() {
+  protected void computeEnabled() {
     setEnabled(true);
     menubar.fireEnableChanged();
   }
@@ -189,6 +210,7 @@ class MenuFile extends Menu implements ActionListener {
     save.setText(S.get("fileSaveItem"));
     saveAs.setText(S.get("fileSaveAsItem"));
     exportProj.setText(S.get("fileExportProject"));
+    extractRunProj.setText(S.get("fileExtractRunProject"));
     exportImage.setText(S.get("fileExportImageItem"));
     print.setText(S.get("filePrintItem"));
     prefs.setText(S.get("filePreferencesItem"));
