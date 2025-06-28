@@ -137,6 +137,127 @@ public class PlaTable {
     return ret.toString();
   }
 
+  private abstract static class Parser {
+    private String comment(String line) {
+      final var separatorIndex = line.indexOf("#");
+
+      return separatorIndex >= 0 ? line.substring(separatorIndex + 1).trim() : "";
+    }
+
+    protected String inputsOutputs(String line) {
+      final var separatorIndex = line.indexOf("#");
+
+      return  separatorIndex >= 0 ? line.substring(0, separatorIndex).trim() : line;
+    }
+
+    private static char[] toLogicArray(String line, String errorKey) throws IOException {
+      // java char indices and IO indices are in opposite order i.e. str[0] is IO[n] etc
+      var arr = new StringBuffer(line).reverse().toString().toCharArray();
+
+      for (final char ch : arr) {
+        if (ch != ONE && ch != ZERO && ch != DONTCARE)
+          throw new IOException(S.get(errorKey, line, "" + ch));
+      }
+
+      return arr;
+    }
+
+    public PlaTable parse(PlaTable tt, String line) throws IOException {
+      final var andBits = inputs(line);
+      final var orBits = outputs(line);
+      final var isCommentLine = andBits.isEmpty() && orBits.isEmpty();
+
+      if (isCommentLine) {
+        return tt;
+      }
+
+      if (tt == null)
+        tt = new PlaTable(andBits.length(), orBits.length(), "PLA");
+      else if (andBits.length() != tt.inSize)
+        throw new IOException(S.get("plaRowExactInBitError", line, "" +  tt.inSize));
+      else if (orBits.length() != tt.outSize)
+        throw new IOException(S.get("plaRowExactOutBitError", line, "" + tt.outSize));
+
+      final var r = tt.addTableRow();
+
+      r.inBits = toLogicArray(andBits, "plaInvalidInputBitError");
+      r.outBits = toLogicArray(orBits, "plaInvalidOutputBitError");
+      r.comment = comment(line);
+
+      return tt;
+    }
+
+    protected abstract String inputs(String line);
+
+    protected abstract String outputs(String line);
+
+    protected abstract boolean canParse(String line);
+  }
+
+  private static class CompactParser extends Parser {
+    protected String inputs(String line) {
+      final var io = inputsOutputs(line);
+      final var separatorIndex = io.indexOf(" ");
+
+      return  separatorIndex >= 0 ? io.substring(0, separatorIndex).trim() : "";
+    }
+
+    protected String outputs(String line) {
+      final var io = inputsOutputs(line);
+      final var separatorIndex = io.indexOf(" ");
+
+      return  separatorIndex >= 0 ? io.substring(separatorIndex + 1).trim() : "";
+    }
+
+    @Override
+    protected boolean canParse(String line) {
+      final var io = inputsOutputs(line);
+
+      return io.matches("[01]+\\s+[01]+");
+    }
+  }
+
+  private static class FlexibleParser extends Parser {
+    private static String stripSeparators(String line) {
+      return  line.replaceAll("[|\\s]", "").trim();
+    }
+
+    protected String inputs(String line) {
+      final var io = inputsOutputs(line);
+      final var separatorIndex = io.indexOf("||");
+
+      return  separatorIndex >= 0 ? stripSeparators(io.substring(0, separatorIndex)) : "";
+    }
+
+    protected String outputs(String line) {
+      final var io = inputsOutputs(line);
+      final var separatorIndex = io.indexOf("||");
+
+      return  separatorIndex >= 0 ? stripSeparators(io.substring(separatorIndex + 1)) : "";
+    }
+
+    protected boolean canParse(String line) {
+      final var io = inputsOutputs(line);
+
+      return io.contains("||");
+    }
+  }
+
+  private static final Parser[] parsers = new Parser[] {
+      new CompactParser(),
+      new FlexibleParser()
+  };
+
+  private static PlaTable parseOneLine(PlaTable tt, String line) throws IOException {
+    for (final var parser : parsers) {
+      if (parser.canParse(line)) {
+        return parser.parse(tt, line);
+      }
+    }
+
+    return tt;
+  }
+
   public static PlaTable parse(String str) {
     PlaTable tt = null;
     for (final var line : str.split("\n")) {
@@ -144,47 +265,10 @@ public class PlaTable {
         tt = parseOneLine(tt, line);
       } catch (IOException e) {
         OptionPane.showMessageDialog(
-            null, e.getMessage(), "Error in PLA Table", OptionPane.ERROR_MESSAGE);
+            null, e.getMessage(), S.get("plaTableError"), OptionPane.ERROR_MESSAGE);
       }
     }
     if (tt == null) tt = new PlaTable(2, 2, "PLA");
-    return tt;
-  }
-
-  private static PlaTable parseOneLine(PlaTable tt, String line) throws IOException {
-    line = line.trim();
-    final var jj = line.indexOf("#");
-    String andBits, orBits, comment = "";
-    if (jj >= 0) {
-      comment = line.substring(jj + 1).trim();
-      line = line.substring(0, jj).trim();
-    }
-    if (line.equals("")) return tt;
-    final var ii = line.indexOf(" ");
-    if (ii <= 0) throw new IOException("PLA row '" + line + "' is missing outputs.");
-    andBits = line.substring(0, ii).trim();
-    orBits = line.substring(ii + 1).trim();
-    if (tt == null) tt = new PlaTable(andBits.length(), orBits.length(), "PLA");
-    else if (andBits.length() != tt.inSize)
-      throw new IOException(
-          "PLA row '" + line + "' must have exactly " + tt.inSize + " input bits.");
-    else if (orBits.length() != tt.outSize)
-      throw new IOException(
-          "PLA row '" + line + "' must have exactly " + tt.outSize + " output bits.");
-    final var r = tt.addTableRow();
-    for (var i = 0; i < andBits.length(); i++) {
-      final var s = andBits.charAt(i);
-      if (s != ONE && s != ZERO && s != DONTCARE)
-        throw new IOException("PLA row '" + line + "' contains invalid input bit '" + s + "'.");
-      r.inBits[andBits.length() - i - 1] = s;
-    }
-    for (var i = 0; i < orBits.length(); i++) {
-      final var s = orBits.charAt(i);
-      if (s != ONE && s != ZERO)
-        throw new IOException("PLA row '" + line + "' contains invalid output bit '" + s + "'.");
-      r.outBits[orBits.length() - i - 1] = s;
-    }
-    r.comment = comment;
     return tt;
   }
 
@@ -208,7 +292,7 @@ public class PlaTable {
       } catch (IOException ignored) {
       }
     }
-    if (tt == null) throw new IOException("PLA file contained no data.");
+    if (tt == null) throw new IOException(S.get("plaFileIoException"));
     return tt;
   }
 
@@ -459,6 +543,12 @@ public class PlaTable {
         final var f = chooser.getSelectedFile();
         try {
           final var loaded = parse(f);
+          if (loaded.inSize() != newTable.inSize()) {
+            throw new IOException(S.get("plaUnexpectedInputWidth", newTable.inSize(), loaded.inSize()));
+          }
+          if (loaded.outSize() != newTable.outSize()) {
+            throw new IOException(S.get("plaUnexpectedOutputWidth", newTable.outSize(), loaded.outSize()));
+          }
           newTable.copyFrom(loaded);
           reset(false);
         } catch (IOException e) {
@@ -489,20 +579,20 @@ public class PlaTable {
       private static final long serialVersionUID = 1L;
 
       public ButtonPanel(JDialog parent) {
-        final var write = new JButton("Export");
+        final var write = new JButton(S.get("plaExportButton"));
         write.addActionListener(e -> write());
         add(write);
 
-        final var read = new JButton("Import");
+        final var read = new JButton(S.get("plaImportButton"));
         read.addActionListener(e -> read());
         add(read);
 
-        final var ok = new JButton("OK");
+        final var ok = new JButton(S.get("plaOKButton"));
         ok.addActionListener(e -> close(true));
         parent.getRootPane().setDefaultButton(ok);
         add(ok);
 
-        final var cancel = new JButton("Cancel");
+        final var cancel = new JButton(S.get("plaCancelButton"));
         cancel.addActionListener(e -> close(false));
         add(cancel);
 
@@ -565,7 +655,7 @@ public class PlaTable {
           super(new FlowLayout(FlowLayout.CENTER, 0, 0));
           this.row = r;
 
-          final var rm = new JButton("Remove");
+          final var rm = new JButton(S.get("plaRemoveButton"));
           rm.setFont(AppPreferences.getScaledFont(rm.getFont().deriveFont(smallFont)));
           rm.addActionListener(e -> deleteRow(RowPanel.this));
           rm.setMargin(new Insets(0, 0, 0, 0));
@@ -642,7 +732,7 @@ public class PlaTable {
 
         public InsertRowPanel() {
           super(new FlowLayout(FlowLayout.CENTER));
-          final var more = new JButton("Add Row");
+          final var more = new JButton(S.get("plaAddRowButton"));
           more.setFont(AppPreferences.getScaledFont(more.getFont().deriveFont(smallFont)));
           more.addActionListener(e -> addRow());
           more.setMargin(new Insets(1, 20, 1, 20));
@@ -682,7 +772,7 @@ public class PlaTable {
 
         add(Box.createRigidArea(dim));
 
-        final var c = new JLabel("comments");
+        final var c = new JLabel(S.get("plaCommentsLabel"));
         c.setFont(AppPreferences.getScaledFont(c.getFont().deriveFont(smallFont)));
         c.setPreferredSize(
             new Dimension(
@@ -706,14 +796,14 @@ public class PlaTable {
                     AppPreferences.getScaled(75 + BS - Math.max(3 - inSz, 0) * BS),
                     AppPreferences.getScaled(15)))); // space for remove button
 
-        final var i = new JLabel("input", SwingConstants.RIGHT);
+        final var i = new JLabel(S.get("plaInputLabel"), SwingConstants.RIGHT);
         i.setFont(AppPreferences.getScaledFont(i.getFont().deriveFont(smallFont)));
         i.setPreferredSize(
             new Dimension(
                 AppPreferences.getScaled(Math.max(inSz, 3) * BS), AppPreferences.getScaled(15)));
         add(i);
 
-        final var o = new JLabel("output", SwingConstants.RIGHT);
+        final var o = new JLabel(S.get("plaOutputLabel"), SwingConstants.RIGHT);
         o.setFont(AppPreferences.getScaledFont(o.getFont().deriveFont(smallFont)));
         o.setPreferredSize(
             new Dimension(
