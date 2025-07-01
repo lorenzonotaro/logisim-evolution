@@ -15,7 +15,7 @@ import java.awt.*;
 public class Inspector extends JPanel {
     private final Project project;
     private final JTextField ra, rb, rc, rd;
-    private final JTextField ss, sp, cspc, ir, ds;
+    private final JTextField ss, sp, bp, cspc, ir, ds;
     private final FlagsInspector flags;
     private final StackInspector stack;
     public Inspector(Project project){
@@ -33,6 +33,7 @@ public class Inspector extends JPanel {
         specialRegistersPanel.setBorder(new TitledBorder("Special registers"));
         specialRegistersPanel.add(labelPanel(ss = createTextField(), "SS"));
         specialRegistersPanel.add(labelPanel(sp = createTextField(), "SP"));
+        specialRegistersPanel.add(labelPanel(bp = createTextField(), "BP"));
         specialRegistersPanel.add(labelPanel(ir = createTextField(), "IR"));
         specialRegistersPanel.add(labelPanel(ds = createTextField(), "DS"));
         specialRegistersPanel.add(labelPanel(cspc = createTextField(), "CS:PC"));
@@ -116,15 +117,12 @@ public class Inspector extends JPanel {
 
         setValue(ss, WatchedSignal.SS);
         setValue(sp, WatchedSignal.SP);
+        setValue(bp, WatchedSignal.BP);
         setValue(ir, WatchedSignal.IR);
         setValue(cspc, WatchedSignal.CS_PC);
         setValue(ds, WatchedSignal.DS);
 
-        var flagsEntry = ComponentDirectory.getEntry(WatchedSignal.FLAGS.directory);
         flags.update(WatchedSignal.FLAGS.getValue().toLongValue());
-
-        var ssEntry = ComponentDirectory.getEntry(WatchedSignal.SS.directory);
-        var spEntry = ComponentDirectory.getEntry(WatchedSignal.SP.directory);
         var ramEntry = ComponentDirectory.getEntry(DebugLncpuWindow.RAM_DIRECTORY);
 
         var ramContents = ((RamState)ramEntry.state.getData(ramEntry.component)).getContents();
