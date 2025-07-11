@@ -17,11 +17,16 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
 
     private final JButton stepOverBtn, stepIntoBtn, pauseResumeBtn, resetBtn;
+    private final JCheckBox standaloneCompilation;
+    private final JTextField compilerOptions;
 
     private final Project project;
     private final LFrame window;
@@ -29,7 +34,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     private final Inspector inspector;
     private File tempDir;
 
-    private File lastProgramOpened, recentEeepromsDir;
+    private File lastProgramFolder, recentEeepromsDir;
 
     static final String ROM_DIRECTORY = "ROM/STORAGE_ROM";
 
@@ -74,19 +79,34 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
         debugControlPanel.add(pauseResumeBtn = new JButton(TEXT_START));
         debugControlPanel.add(resetBtn = new JButton(TEXT_RESET));
         north.add(debugControlPanel, BorderLayout.EAST);
+
         final var openFile = new JButton("Load program...");
         final var loadCtrEeproms = new JButton("Load CU EEPROMs...");
-
         final var flowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+        this.standaloneCompilation = new JCheckBox("Standalone", true);
+        this.compilerOptions = new JTextField("");
 
         flowPanel.add(loadCtrEeproms);
         flowPanel.add(openFile);
+        flowPanel.add(this.standaloneCompilation);
+
+        var fileInputsPanel = new JPanel(new BorderLayout());
+        fileInputsPanel.add(flowPanel, BorderLayout.NORTH);
+
+        var compOptionsPanel = new JPanel(new BorderLayout());
+
+        compOptionsPanel.add(new JLabel("Compiler options:"), BorderLayout.WEST);
+        compOptionsPanel.add(this.compilerOptions, BorderLayout.CENTER);
+
+        fileInputsPanel.add(compOptionsPanel, BorderLayout.SOUTH);
+
+        north.add(fileInputsPanel, BorderLayout.WEST);
+
         openFile.addActionListener(this::loadProgramPressed);
         loadCtrEeproms.addActionListener(this::loadCtrEepromsPressed);
-        north.add(flowPanel, BorderLayout.WEST);
 
         //Main panel
-
         codeArea = new DebuggerTextArea();
         codeArea.setFont(new Font("monospaced", Font.PLAIN, AppPreferences.getScaled(8)));
         codeArea.setEditable(false);
@@ -206,10 +226,10 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     private void loadProgramPressed(ActionEvent actionEvent) {
         var fc = JFileChoosers.createSelected(getRecentProgram());
 
-        fc.setFileFilter(new FileNameExtensionFilter("lnasm file", "lnasm"));
+        fc.setFileFilter(new FileNameExtensionFilter("lnasm/lnc file(s)", "lnasm", "lnc"));
+        fc.setMultiSelectionEnabled(true);
         fc.setDialogTitle("Load program");
         fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        fc.setMultiSelectionEnabled(false);
         fc.setAcceptAllFileFilterUsed(false);
 
         var ret = fc.showOpenDialog(this.window);
@@ -224,33 +244,43 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             tempDir.deleteOnExit();
         }
 
-        if (ret == JFileChooser.APPROVE_OPTION) {
-            var file = fc.getSelectedFile();
+        if (ret == JFileChooser.APPROVE_OPTION && fc.getSelectedFiles().length > 0) {
+            // get the selected files
+            var files = fc.getSelectedFiles();
 
-            var linkerFile = new File(file.getParent(), "linker.cfg");
-            // check if linker.cfg file is present next to the selected file
-            if(!linkerFile.exists()){
-                fc = JFileChoosers.createSelected(file);
-                fc.setFileFilter(new FileNameExtensionFilter("linker config file", "cfg"));
-                fc.setDialogTitle("Select linker config file");
-                fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-                fc.setMultiSelectionEnabled(false);
-                fc.setAcceptAllFileFilterUsed(false);
-                ret = fc.showOpenDialog(this.window);
-                if(ret == JFileChooser.APPROVE_OPTION){
-                    linkerFile = fc.getSelectedFile();
-                } else {
-                    return;
+            File linkerFile = null;
+
+            // check if linker.cfg files is present next to the selected files
+            for(int i = 0; i < files.length && linkerFile == null; ++i){
+                // check if there exists a linker.cfg file next to the selected file
+                var file = files[i];
+                linkerFile = new File(file.getParent(), "linker.cfg");
+                if(!linkerFile.exists()){
+                    continue;
                 }
             }
 
-            lastProgramOpened = file;
-            loadProgram(file, linkerFile);
+            fc = JFileChoosers.createSelected(files[0].getParentFile());
+            fc.setFileFilter(new FileNameExtensionFilter("linker config files", "cfg"));
+            fc.setDialogTitle("Select linker config files");
+            fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            fc.setMultiSelectionEnabled(false);
+            fc.setAcceptAllFileFilterUsed(false);
+            ret = fc.showOpenDialog(this.window);
+            if(ret == JFileChooser.APPROVE_OPTION){
+                linkerFile = fc.getSelectedFile();
+            } else {
+                return;
+            }
+
+
+            lastProgramFolder = files[0].getParentFile();
+            loadProgram(files, linkerFile);
         }
     }
 
     private File getRecentProgram() {
-        return getRecent(lastProgramOpened);
+        return getRecent(lastProgramFolder);
     }
 
     private File getRecentEepromsDir(){
@@ -267,17 +297,37 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
     }
 
 
-    private void loadProgram(File file, File linkerFile) {
+    private void loadProgram(File[] file, File linkerFile) {
         try {
-            // exec cmd lnasm on the given file to generate binary and immediate code
-            String[] command;
+            // exec cmd lnc on the given file to generate binary and immediate code
+            List<String> command = new ArrayList<>();
+
+            List<String> filesPaths = Arrays.stream(file).map(File::getAbsolutePath).map(path -> "\"" + path + "\"").toList();
 
             if(System.getProperty("os.name").toLowerCase().contains("windows")) {
-                command = new String[]{"cmd", "/C", "lnasm", "\"" + file.getAbsolutePath() +"\"", "-oB", "a.out", "-oI", "a.immediate.txt", "-lf", linkerFile.getAbsolutePath()};
+                command.add("cmd");
+                command.add("/C");
             } else {
-                command = new String[]{"bash", "-c", "lnasm", "\"" + file.getAbsolutePath() + "\"", "-oB", "a.out", "-oI", "a.immediate.txt", "-lf", linkerFile.getAbsolutePath()};
+                command.add("bash");
+                command.add("-c");
             }
 
+            command.add("lnc");
+            command.addAll(filesPaths);
+            command.add("-oB");
+            command.add(new File(tempDir, "a.out").getAbsolutePath());
+            command.add("-oI");
+            command.add(new File(tempDir, "a.immediate.txt").getAbsolutePath());
+            command.add("-lf");
+            command.add(linkerFile.getAbsolutePath());
+
+            if(this.standaloneCompilation.isSelected()) {
+                command.add("--standalone");
+            }
+
+            if(!compilerOptions.getText().isBlank()) {
+                command.addAll(Arrays.stream(compilerOptions.getText().split(" ")).toList());
+            }
 
             var cmd = new ProcessBuilder(command);
             cmd.directory(tempDir);
@@ -285,7 +335,7 @@ public class DebugLncpuWindow implements Simulator.Listener, DebuggerListener {
             process.waitFor();
 
             if(process.exitValue() != 0) {
-                JOptionPane.showMessageDialog(this.window, String.format("Compilation failed for file '%s': \n%s", file.getName(), new String(process.getErrorStream().readAllBytes())), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this.window, String.format("Compilation failed: \n%s", new String(process.getErrorStream().readAllBytes())), "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
