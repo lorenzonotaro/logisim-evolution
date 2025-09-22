@@ -5,7 +5,7 @@ import java.util.regex.*;
 
 public class Line {
 
-    private static final Pattern REGEX_MATCHER = Pattern.compile("^\\s*(?<labels>[a-zA-Z0-9_$\\s,]*:)?\\s*(?<address>[0-9a-zA-Z]{6}):\\s*(?<instructionCode>[0-9a-fA-F]{2})\\s*\\((?<instructionName>[a-z0-9_]+)\\)\\s*(?<parameters>[0-9a-fA-F\\s]*)\\s+$");
+    private static final Pattern REGEX_MATCHER = Pattern.compile("^\\s*(?<labels>[a-zA-Z0-9_$\\s,]*:)?\\s*(?<address>[0-9a-zA-Z]{6}):\\s*(?<instructionCode>[0-9a-fA-F]{2})\\s*\\((?<instructionName>[a-z0-9_]+)\\)\\s*(?<parameters>[0-9a-fA-FX\\s]*)\\s+$");
 
     private final int lineNumber;
     private final String line;
@@ -34,7 +34,7 @@ public class Line {
             this.instructionName = matcher.group("instructionName");
             String parametersGroup = matcher.group("parameters");
 
-            if (parametersGroup == null || parametersGroup.isBlank()) {
+            if (parametersGroup == null || parametersGroup.isBlank() || parametersGroup.contains("X")) {
                 this.params = new int[0];
             }else{
                 this.params = Arrays.stream(parametersGroup.split(" ")).filter(s -> !s.isBlank()).map(s -> Integer.parseInt(s, 16)).mapToInt(Integer::intValue).toArray();
