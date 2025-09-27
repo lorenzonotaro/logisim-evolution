@@ -1,8 +1,23 @@
 [![Logisim-evolution](docs/img/logisim-evolution-logo.png)](https://github.com/logisim-evolution/logisim-evolution)
 
+
 ---
 
-# Logisim-evolution #
+# Logisim-evolution (LNCPU debugger version) #
+
+**Warning**: this is an experimental version of Logisim designed to be used for [lncpu](https://github.com/lorenzonotaro/lncpu/) debugging. Expect instability and crashes if used with another project.
+
+## Added features for lncpu debugging ##
+1. Simulate -> Debug LNCPU... :
+   Opens a debugger window that allows the user to:
+
+   a. Compile, load and debug a lnasm/lnc program (requires lnc to be in the PATH)
+
+   b. Load CU EEPROMs all at once
+
+2. Simulate -> Test LNCPU architecture: allows the user to select a test folder and runs tests on the architecture
+
+---
 
 * **Table of contents**
   * [Features](#features)
