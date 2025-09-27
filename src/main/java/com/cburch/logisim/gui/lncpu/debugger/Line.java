@@ -5,7 +5,7 @@ import java.util.regex.*;
 
 public class Line {
 
-    private static final Pattern REGEX_MATCHER = Pattern.compile("^\\s*(?<labels>[a-zA-Z0-9_$\\s,]*:)?\\s*(?<address>[0-9a-zA-Z]{6}):\\s*(?<instructionCode>[0-9a-fA-F]{2})\\s*\\((?<instructionName>[a-z0-9_]+)\\)\\s*(?<parameters>[0-9a-fA-FX\\s]*)\\s+$");
+    private static final Pattern REGEX_MATCHER = Pattern.compile("^\\s*(?<labels>[a-zA-Z0-9_$\\s,]*:)?\\s*(?<address>[0-9a-zA-Z]{6}):\\s*(?<instructionCode>[0-9a-fA-F]{2})\\s*\\((?<instructionName>[a-z0-9_$]+)\\)\\s*(?<parameters>[0-9a-fA-FX\\s]*)\\s+$");
 
     private final int lineNumber;
     private final String line;
